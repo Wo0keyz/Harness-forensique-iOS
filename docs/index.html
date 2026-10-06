@@ -1,0 +1,320 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Harness forensique iOS</title>
+<meta name="description" content="Analyse d'une extraction iPhone par un modèle de langage local, où le code extrait et vérifie et le modèle raisonne.">
+<link rel="stylesheet" href="assets/style.css">
+<script src="assets/site.js"></script>
+</head>
+<body>
+
+<header class="topbar">
+  <div class="topbar-inner">
+    <a class="brand" href="index.html"><span class="brand-mark" aria-hidden="true"></span>Harness forensique iOS</a>
+    <nav class="tabs" aria-label="Pages">
+      <a href="index.html" aria-current="page">Accueil</a>
+      <a href="analystes.html">Guide analystes</a>
+      <a href="technique.html">Documentation technique</a>
+    </nav>
+    <button class="theme-toggle" type="button">Thème sombre</button>
+  </div>
+</header>
+
+<div class="layout">
+  <aside class="toc">
+    <details open>
+      <summary>Sommaire</summary>
+      <p class="toc-title">Sur cette page</p>
+      <ol>
+        <li><a href="#en-bref">En bref</a></li>
+        <li><a href="#principe">Le principe</a></li>
+        <li><a href="#parcours">Le parcours d'une analyse</a></li>
+        <li><a href="#garanties">Ce qui est garanti, ce qui ne l'est pas</a></li>
+        <li><a href="#resultats">Résultats actuels</a></li>
+        <li><a href="#demarrage">Démarrage rapide</a></li>
+        <li><a href="#composants">Composants</a></li>
+        <li><a href="#documentation">Lire la suite</a></li>
+      </ol>
+    </details>
+  </aside>
+
+  <main class="content">
+    <h1>Harness forensique iOS</h1>
+    <p class="subtitle">LangGraph · iLEAPP-MCP · modèle de langage local</p>
+
+    <table class="infobox">
+      <caption>Harness forensique iOS</caption>
+      <tbody>
+        <tr><th>Entrée</th><td>Sortie <a href="https://github.com/abrignoni/iLEAPP">iLEAPP</a> d'une extraction iPhone</td></tr>
+        <tr><th>Sortie</th><td><code>report.md</code> + <code>preuves.json</code>, dossier d'exécution scellé</td></tr>
+        <tr><th>Orchestration</th><td>LangGraph 1.x (Python ≥ 3.11)</td></tr>
+        <tr><th>Modèle</th><td>Qwen3.8 27B dense, Q4_K_M, servi par llama.cpp</td></tr>
+        <tr><th>Accès aux preuves</th><td>Serveur iLEAPP-MCP, lecture seule</td></tr>
+        <tr><th>Traces</th><td>Langfuse auto-hébergé</td></tr>
+        <tr><th>Réseau</th><td>100 % local, isolement Internet possible</td></tr>
+        <tr><th>Droit</th><td>Catalogue suisse (CP, LStup), <em>projet</em></td></tr>
+        <tr><th>Tests</th><td>111 (pytest, sans modèle)</td></tr>
+        <tr><th>État</th><td>Prototype évalué sur 3 cas</td></tr>
+      </tbody>
+    </table>
+
+    <section id="en-bref">
+      <p class="lead">Le harness fait lire à un modèle de langage <strong>local</strong> tout le contenu d'un iPhone
+      extrait avec iLEAPP. Il en tire des scénarios d'enquête, instruits à charge et à décharge, et rédige un rapport
+      dont <strong>chaque phrase renvoie à une preuve numérotée</strong> qu'on peut relire.</p>
+      <p>Un téléphone saisi, c'est des centaines de milliers de lignes : messages, applications, réseaux, fichiers,
+      lieux. Un enquêteur ne peut pas tout lire. Un modèle de langage le peut, mais il peut aussi inventer. Le harness
+      encadre donc le modèle : le code extrait les preuves, vérifie chaque affirmation et assemble le rapport. Ce qui
+      n'est pas vérifié n'est pas imprimé.</p>
+      <div class="callout warn">
+        <span class="callout-title">Un outil d'aide, pas un expert</span>
+        Le rapport est un brouillon de travail pour l'analyste. Il ne conclut jamais à la culpabilité de quelqu'un,
+        il s'arrête avant publication pour être relu et validé nominativement, et la qualification juridique revient
+        au magistrat. Le catalogue d'infractions est un projet à faire valider par un juriste.
+      </div>
+    </section>
+
+    <section id="principe">
+      <h2>Le principe</h2>
+      <p><strong>Le code extrait et vérifie, le modèle raisonne.</strong> Tout ce qui peut être fait de façon
+      déterministe est fait par du code. Le modèle de langage n'intervient que là où il faut lire et relier, et il
+      est contrôlé à chaque sortie.</p>
+      <div class="cards">
+        <div class="card code">
+          <h3>Code <span class="tag code">déterministe</span></h3>
+          <p>Lit les exports par nom exact, numérote chaque ligne de preuve, relève la fiche du terminal, contrôle
+          chaque constat du modèle, plafonne les verdicts, assemble le rapport, scelle le dossier d'exécution.</p>
+        </div>
+        <div class="card model">
+          <h3>Modèle <span class="tag model">raisonne</span></h3>
+          <p>Lit les communications et l'activité, note des signaux neutres, formule des scénarios, instruit chacun
+          avec des outils en lecture seule, joue la défense, rapproche d'un catalogue d'infractions, rédige.</p>
+        </div>
+        <div class="card human">
+          <h3>Analyste <span class="tag human">décide</span></h3>
+          <p>Relit le brouillon, preuves en main, puis le valide (nominativement) ou le rejette (avec un motif).
+          Le rapport final porte cette décision en tête.</p>
+        </div>
+      </div>
+    </section>
+
+    <section id="parcours">
+      <h2>Le parcours d'une analyse</h2>
+      <div class="legend">
+        <span><i class="l-code"></i>code</span>
+        <span><i class="l-model"></i>modèle de langage</span>
+        <span><i class="l-data"></i>preuves et livrables</span>
+        <span><i class="l-human"></i>analyste</span>
+      </div>
+      <figure class="diagram">
+        <div class="scroll-x">
+        <svg viewBox="0 0 880 316" role="img" aria-labelledby="fig1-t">
+          <title id="fig1-t">De l'image iOS au rapport : extraction, lecture, hypothèses, enquête, qualification, rédaction, validation</title>
+          <defs>
+            <marker id="a1" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="arrow-head" d="M0,0 L10,5 L0,10 z"/></marker>
+          </defs>
+          <!-- rangée 1 -->
+          <rect class="b-data" x="8" y="42" width="96" height="48" rx="6"/>
+          <text x="56" y="63" text-anchor="middle" font-size="13" class="t-b">Image iOS</text>
+          <text x="56" y="80" text-anchor="middle" font-size="11" class="t-muted">extraction</text>
+
+          <rect class="box" x="132" y="42" width="96" height="48" rx="6"/>
+          <text x="180" y="63" text-anchor="middle" font-size="13" class="t-b">iLEAPP</text>
+          <text x="180" y="80" text-anchor="middle" font-size="11" class="t-muted">open source</text>
+
+          <rect class="b-data" x="256" y="42" width="104" height="48" rx="6"/>
+          <text x="308" y="63" text-anchor="middle" font-size="13" class="t-b">Exports</text>
+          <text x="308" y="80" text-anchor="middle" font-size="11" class="t-muted">TSV · SQLite</text>
+
+          <rect class="b-data" x="388" y="42" width="116" height="48" rx="6"/>
+          <text x="446" y="63" text-anchor="middle" font-size="13" class="t-b">iLEAPP-MCP</text>
+          <text x="446" y="80" text-anchor="middle" font-size="11" class="t-muted">lecture seule</text>
+
+          <rect class="b-code" x="532" y="42" width="110" height="48" rx="6"/>
+          <text x="587" y="63" text-anchor="middle" font-size="13" class="t-b">Extraction</text>
+          <text x="587" y="80" text-anchor="middle" font-size="11" class="t-muted">≈ 50 exports</text>
+
+          <rect class="b-code" x="690" y="8" width="182" height="34" rx="6"/>
+          <text x="781" y="30" text-anchor="middle" font-size="12.5">Fiche du terminal</text>
+          <rect class="b-model" x="690" y="49" width="182" height="34" rx="6"/>
+          <text x="781" y="71" text-anchor="middle" font-size="12.5">Lecture : communications</text>
+          <rect class="b-model" x="690" y="90" width="182" height="34" rx="6"/>
+          <text x="781" y="112" text-anchor="middle" font-size="12.5">Lecture : activité</text>
+
+          <line class="line" x1="104" y1="66" x2="130" y2="66" marker-end="url(#a1)"/>
+          <line class="line" x1="228" y1="66" x2="254" y2="66" marker-end="url(#a1)"/>
+          <line class="line" x1="360" y1="66" x2="386" y2="66" marker-end="url(#a1)"/>
+          <line class="line" x1="504" y1="66" x2="530" y2="66" marker-end="url(#a1)"/>
+          <path class="line" d="M642,66 L664,66 L664,25 L688,25" marker-end="url(#a1)"/>
+          <path class="line" d="M664,66 L688,66" marker-end="url(#a1)"/>
+          <path class="line" d="M664,66 L664,107 L688,107" marker-end="url(#a1)"/>
+
+          <!-- liaison vers la rangée 2 -->
+          <path class="line" d="M781,124 L781,150 L68,150 L68,180" marker-end="url(#a1)"/>
+          <text x="420" y="144" text-anchor="middle" font-size="11.5" class="t-muted">signaux neutres : pression, contrepartie, canal discret, dissimulation…</text>
+
+          <!-- rangée 2 -->
+          <rect class="b-model" x="8" y="182" width="120" height="52" rx="6"/>
+          <text x="68" y="204" text-anchor="middle" font-size="13" class="t-b">Hypothèses</text>
+          <text x="68" y="222" text-anchor="middle" font-size="11" class="t-muted">0 à 4 scénarios</text>
+
+          <rect class="b-model" x="152" y="182" width="160" height="52" rx="6"/>
+          <text x="232" y="204" text-anchor="middle" font-size="13" class="t-b">Enquête par scénario</text>
+          <text x="232" y="222" text-anchor="middle" font-size="11" class="t-muted">instruction ⇄ contradiction</text>
+
+          <rect class="b-model" x="336" y="182" width="120" height="52" rx="6"/>
+          <text x="396" y="204" text-anchor="middle" font-size="13" class="t-b">Qualification</text>
+          <text x="396" y="222" text-anchor="middle" font-size="11" class="t-muted">catalogue CH</text>
+
+          <rect class="b-model" x="480" y="182" width="104" height="52" rx="6"/>
+          <text x="532" y="212" text-anchor="middle" font-size="13" class="t-b">Rédaction</text>
+
+          <rect class="b-human" x="608" y="182" width="120" height="52" rx="6"/>
+          <text x="668" y="204" text-anchor="middle" font-size="13" class="t-b">Validation</text>
+          <text x="668" y="222" text-anchor="middle" font-size="11" class="t-muted">par l'analyste</text>
+
+          <rect class="b-data" x="752" y="182" width="120" height="52" rx="6"/>
+          <text x="812" y="204" text-anchor="middle" font-size="12" class="t-mono">report.md</text>
+          <text x="812" y="222" text-anchor="middle" font-size="12" class="t-mono">preuves.json</text>
+
+          <line class="line" x1="128" y1="208" x2="150" y2="208" marker-end="url(#a1)"/>
+          <line class="line" x1="312" y1="208" x2="334" y2="208" marker-end="url(#a1)"/>
+          <line class="line" x1="456" y1="208" x2="478" y2="208" marker-end="url(#a1)"/>
+          <line class="line" x1="584" y1="208" x2="606" y2="208" marker-end="url(#a1)"/>
+          <line class="line" x1="728" y1="208" x2="750" y2="208" marker-end="url(#a1)"/>
+
+          <!-- contrôle automatique -->
+          <rect class="b-code" x="8" y="270" width="576" height="36" rx="6"/>
+          <text x="296" y="292" text-anchor="middle" font-size="12.5">Contrôle automatique de chaque constat : preuves citées existantes, citation exacte, dates et auteurs</text>
+          <line class="line-dash" x1="68" y1="234" x2="68" y2="268"/>
+          <line class="line-dash" x1="232" y1="234" x2="232" y2="268"/>
+          <line class="line-dash" x1="396" y1="234" x2="396" y2="268"/>
+          <line class="line-dash" x1="532" y1="234" x2="532" y2="268"/>
+          <line class="line-dash" x1="781" y1="124" x2="781" y2="128"/>
+        </svg>
+        </div>
+        <figcaption><b>Figure 1.</b> Vue d'ensemble. Le harness ne lit jamais les fichiers du cas lui-même : tout passe
+        par le serveur iLEAPP-MCP, en lecture seule. Chaque sortie du modèle (orange) passe par le contrôle du code
+        (bleu) avant d'aller plus loin.</figcaption>
+      </figure>
+      <p>Le détail de chaque étape, avec des schémas, est dans le <a href="analystes.html">guide pour les
+      analystes</a>. L'implémentation est décrite nœud par nœud dans la <a href="technique.html#graphe">documentation
+      technique</a>.</p>
+    </section>
+
+    <section id="garanties">
+      <h2>Ce qui est garanti, ce qui ne l'est pas</h2>
+      <div class="two-col">
+        <div class="yes">
+          <h4>Garanti par le code</h4>
+          <ul class="small">
+            <li>Chaque phrase du rapport cite au moins une preuve qui existe et qui a été montrée au modèle.</li>
+            <li>Chaque citation recopiée se retrouve dans la ligne de preuve citée.</li>
+            <li>Chaque date et chaque heure écrites figurent dans les preuves citées.</li>
+            <li>L'auteur d'un message n'est pas contredit par l'expéditeur ou le sens du message cité.</li>
+            <li>Aucun scénario « étayé » sans deux éléments à charge vérifiés, appuyés sur deux preuves distinctes.</li>
+            <li>Les preuves ne sont jamais modifiées, et toute modification pendant l'analyse est signalée.</li>
+            <li>Aucune donnée de dossier n'est envoyée à un service en ligne : le traçage cloud est coupé dans le code, les traces restent dans un Langfuse local.</li>
+          </ul>
+        </div>
+        <div class="no">
+          <h4>Pas garanti</h4>
+          <ul class="small">
+            <li>Le <em>sens</em> d'une phrase : citer la bonne ligne en l'interprétant mal passe le contrôle.</li>
+            <li>L'exhaustivité : des faits présents dans le téléphone peuvent manquer au rapport.</li>
+            <li>La reproductibilité au mot près : deux exécutions peuvent différer, c'est mesuré.</li>
+            <li>L'identité de l'analyste qui valide : son nom est déclaratif.</li>
+            <li>La qualification juridique : le catalogue est un projet, et la décision revient au magistrat.</li>
+          </ul>
+        </div>
+      </div>
+    </section>
+
+    <section id="resultats">
+      <h2>Résultats actuels</h2>
+      <p>Évaluation <code>phase36-fixes</code> du 3 octobre 2026 : chaque cas est exécuté trois fois, sur une copie
+      figée du code, sans cache. Magnet est une image iOS publique (CTF) avec une vérité terrain de 18 faits et
+      3 scénarios ; les deux témoins sont synthétiques, et le bon résultat y est de ne retenir aucun scénario.</p>
+      <div class="kpis">
+        <div class="kpi ok"><div class="v">100 %</div><div class="l">scénarios attendus retrouvés sur Magnet</div></div>
+        <div class="kpi ok"><div class="v">97 %</div><div class="l">citations valides sur Magnet</div></div>
+        <div class="kpi"><div class="v">82 %</div><div class="l">rappel des faits à la lecture (Magnet)</div></div>
+        <div class="kpi ok"><div class="v">0</div><div class="l">accusation inventée, toutes exécutions</div></div>
+        <div class="kpi ko"><div class="v">1 / 3</div><div class="l">passes du cas ambigu qui retiennent un scénario à tort</div></div>
+        <div class="kpi ko"><div class="v">51 %</div><div class="l">citations valides sur le cas bénin</div></div>
+      </div>
+      <p class="small muted">Magnet a aussi servi à régler les prompts : ses chiffres sont optimistes. Le cas public
+      tenu à l'écart (image iOS 17 de Joshua Hickman) n'a pas encore été évalué. Détail et graphiques :
+      <a href="analystes.html#resultats">guide analystes</a> ; tableaux complets :
+      <a href="technique.html#resultats">documentation technique</a>.</p>
+    </section>
+
+    <section id="demarrage">
+      <h2>Démarrage rapide</h2>
+      <p>Prérequis : une sortie iLEAPP, le serveur d'inférence llama.cpp démarré, et les deux dépôts
+      <code>forensic-langgraph</code> et <code>iLEAPP-MCP</code> clonés côte à côte. L'installation complète, depuis une
+      machine vierge, est dans la <a href="technique.html#installation">documentation technique</a>.</p>
+<pre data-title="bash"><code>cd forensic-langgraph
+uv sync                                   <span class="c"># environnement à partir de uv.lock</span>
+cp .env.example .env &amp;&amp; chmod 600 .env    <span class="c"># puis renseigner les clés Langfuse</span>
+uv run pytest                             <span class="c"># 111 tests, sans modèle</span>
+
+<span class="c"># coût prévu (lots, tokens), sans appeler le modèle</span>
+uv run python -m forensic_harness /chemin/vers/sortie_iLEAPP --plan
+
+<span class="c"># analyse ; s'arrête sur un brouillon à valider (code de sortie 3)</span>
+uv run python -m forensic_harness /chemin/vers/sortie_iLEAPP
+
+<span class="c"># décision de l'analyste sur ce brouillon-là</span>
+uv run python -m forensic_harness --resume runs/&lt;cas&gt;/&lt;exécution&gt; \
+    --draft-sha256 &lt;empreinte&gt; --approve --analyst "Nom"
+
+<span class="c"># contrôle a posteriori d'une exécution scellée</span>
+uv run python -m forensic_harness --verify runs/&lt;cas&gt;/&lt;exécution&gt; --manifest-sha256 &lt;empreinte notée&gt;</code></pre>
+    </section>
+
+    <section id="composants">
+      <h2>Composants</h2>
+      <div class="table-wrap">
+      <table>
+        <thead><tr><th>Composant</th><th>Rôle</th><th>Origine</th></tr></thead>
+        <tbody>
+          <tr><td><code>forensic-langgraph</code></td><td>Le harness : graphe LangGraph, agents, contrôle, rapport, chaîne de possession, évaluation, infrastructure versionnée</td><td>Dépôt du projet</td></tr>
+          <tr><td><code>iLEAPP-MCP</code></td><td>Serveur MCP en lecture seule sur une sortie iLEAPP, avec la provenance de chaque ligne</td><td><a href="https://github.com/Wo0keyz/iLEAPP-MCP">Wo0keyz/iLEAPP-MCP</a>, branche <code>feat/harness-provenance</code></td></tr>
+          <tr><td>iLEAPP</td><td>Transforme l'image du téléphone en exports (TSV, SQLite, HTML)</td><td><a href="https://github.com/abrignoni/iLEAPP">abrignoni/iLEAPP</a></td></tr>
+          <tr><td>llama.cpp</td><td>Serveur d'inférence local, API compatible OpenAI, sortie contrainte par schéma JSON</td><td>Image <code>ghcr.io/ggml-org/llama.cpp</code> épinglée (build b10731)</td></tr>
+          <tr><td>Qwen3.8 27B</td><td>Modèle de langage dense, quantifié Q4_K_M</td><td>GGUF identifié par son SHA-256</td></tr>
+          <tr><td>Langfuse</td><td>Traces de chaque exécution et expériences d'évaluation</td><td>Auto-hébergé (Docker), images épinglées</td></tr>
+        </tbody>
+      </table>
+      </div>
+    </section>
+
+    <section id="documentation">
+      <h2>Lire la suite</h2>
+      <div class="cards">
+        <a class="card human" href="analystes.html">
+          <h3>Guide pour les analystes forensiques</h3>
+          <p>Comprendre comment le harness travaille, sans prérequis technique : le parcours d'une preuve, les
+          garde-fous, l'enquête contradictoire, l'anatomie du rapport, les résultats. Très illustré.</p>
+          <span class="go">Ouvrir le guide →</span>
+        </a>
+        <a class="card code" href="technique.html">
+          <h3>Documentation technique</h3>
+          <p>Tout ce qu'il faut pour reproduire l'installation depuis une machine vierge, puis le fonctionnement
+          détaillé : graphe, agents, contrôle, MCP, chaîne de possession, évaluation, sécurité réseau.</p>
+          <span class="go">Ouvrir la documentation →</span>
+        </a>
+      </div>
+    </section>
+
+    <p class="footer">Documentation établie à partir du code : harness <code>71905ce</code>, iLEAPP-MCP
+    <code>47a630f</code> (branche <code>feat/harness-provenance</code>), résultats d'évaluation du 3 octobre 2026.
+    Les adresses, chemins et identifiants propres à l'infrastructure sont remplacés par des repères du type
+    <code>&lt;IP_POSTE_ANALYSTE&gt;</code>.</p>
+  </main>
+</div>
+</body>
+</html>

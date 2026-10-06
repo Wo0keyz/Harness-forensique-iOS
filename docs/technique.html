@@ -1,0 +1,1316 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Documentation technique</title>
+<meta name="description" content="Installation reproductible depuis une machine vierge et fonctionnement détaillé du harness forensique iOS : graphe LangGraph, agents, contrôle, iLEAPP-MCP, chaîne de possession, évaluation.">
+<link rel="stylesheet" href="assets/style.css">
+<script src="assets/site.js"></script>
+</head>
+<body>
+
+<header class="topbar">
+  <div class="topbar-inner">
+    <a class="brand" href="index.html"><span class="brand-mark" aria-hidden="true"></span>Harness forensique iOS</a>
+    <nav class="tabs" aria-label="Pages">
+      <a href="index.html">Accueil</a>
+      <a href="analystes.html">Guide analystes</a>
+      <a href="technique.html" aria-current="page">Documentation technique</a>
+    </nav>
+    <button class="theme-toggle" type="button">Thème sombre</button>
+  </div>
+</header>
+
+<div class="layout">
+  <aside class="toc">
+    <details open>
+      <summary>Sommaire</summary>
+      <p class="toc-title">Documentation technique</p>
+      <ol>
+        <li><a href="#vue">Vue d'ensemble</a></li>
+        <li><a href="#reference">Configuration de référence</a></li>
+        <li><a href="#installation">Installation depuis zéro</a>
+          <ol>
+            <li><a href="#inst-systeme">1. Système de base</a></li>
+            <li><a href="#inst-nvidia">2. Pilote NVIDIA</a></li>
+            <li><a href="#inst-docker">3. Docker et GPU</a></li>
+            <li><a href="#inst-uv">4. uv et Python</a></li>
+            <li><a href="#inst-modele">5. Modèle GGUF</a></li>
+            <li><a href="#inst-llama">6. Serveur llama.cpp</a></li>
+            <li><a href="#inst-langfuse">7. Langfuse</a></li>
+            <li><a href="#inst-ileapp">8. iLEAPP</a></li>
+            <li><a href="#inst-harness">9. iLEAPP-MCP et harness</a></li>
+            <li><a href="#inst-reseau">10. Pare-feu et isolement</a></li>
+            <li><a href="#inst-verif">11. Vérification</a></li>
+          </ol>
+        </li>
+        <li><a href="#configuration">Configuration</a></li>
+        <li><a href="#cli">Ligne de commande</a></li>
+        <li><a href="#graphe">Le graphe LangGraph</a></li>
+        <li><a href="#extraction">Extraction</a></li>
+        <li><a href="#profil">Fiche du terminal</a></li>
+        <li><a href="#llm">Appels au modèle</a></li>
+        <li><a href="#agents">Agents et prompts</a></li>
+        <li><a href="#validation">Contrôle des constats</a></li>
+        <li><a href="#enquete">Enquête</a></li>
+        <li><a href="#qualification">Qualification et rédaction</a></li>
+        <li><a href="#rapport">Rapport et preuves.json</a></li>
+        <li><a href="#possession">Chaîne de possession</a></li>
+        <li><a href="#mcp">Serveur iLEAPP-MCP</a></li>
+        <li><a href="#observabilite">Observabilité</a></li>
+        <li><a href="#evaluation">Évaluation</a></li>
+        <li><a href="#resultats">Résultats phase36-fixes</a></li>
+        <li><a href="#tests">Tests et CI</a></li>
+        <li><a href="#moe">Serveur de lecture MoE</a></li>
+        <li><a href="#depannage">Limites et dépannage</a></li>
+        <li><a href="#annexe">Annexe : ancien guide</a></li>
+      </ol>
+    </details>
+  </aside>
+
+  <main class="content">
+    <h1>Documentation technique</h1>
+    <p class="subtitle">Reproduire l'installation depuis une machine vierge, puis comprendre chaque composant.</p>
+
+    <div class="callout note">
+      <span class="callout-title">Conventions</span>
+      Les valeurs propres à l'infrastructure sont remplacées par des repères :
+      <code>&lt;IP_POSTE_ANALYSTE&gt;</code> (poste autorisé à joindre la machine), <code>&lt;INTERFACE&gt;</code>
+      (interface réseau vers ce poste), <code>&lt;RESEAU_LOCAL&gt;</code> (ex. <code>10.0.0.0/24</code>),
+      <code>&lt;HOTE_ANALYSE&gt;</code> (nom ou adresse de la machine d'analyse), <code>&lt;utilisateur&gt;</code>
+      (compte Unix) et <code>&lt;URL_DEPOT_HARNESS&gt;</code> (dépôt Git du harness). Aucun secret n'est reproduit.
+      Les chemins de code renvoient au dépôt <code>forensic-langgraph</code> (commit <code>71905ce</code>) et au
+      dépôt <code>iLEAPP-MCP</code> (commit <code>47a630f</code>).
+    </div>
+
+    <!-- ========================================================================================== -->
+    <section id="vue">
+      <h2>Vue d'ensemble</h2>
+      <p>Le harness est un graphe <a href="https://github.com/langchain-ai/langgraph">LangGraph</a> écrit en Python.
+      Il lit une sortie iLEAPP à travers un serveur MCP en lecture seule, fait raisonner un modèle local servi par
+      llama.cpp (API compatible OpenAI), contrôle chaque sortie du modèle par du code, et produit un rapport
+      traçable dans un dossier d'exécution scellé. Quatre éléments, tous sur la même machine :</p>
+      <div class="table-wrap">
+      <table>
+        <thead><tr><th>Élément</th><th>Emplacement de référence</th><th>Rôle</th></tr></thead>
+        <tbody>
+          <tr><td><code>forensic-langgraph</code></td><td><code>~/forensic-langgraph</code></td><td>Le harness (paquet <code>forensic_harness</code>), ses jeux d'évaluation, son infrastructure versionnée (<code>infra/</code>).</td></tr>
+          <tr><td><code>iLEAPP-MCP</code></td><td><code>~/iLEAPP-MCP</code>, à côté du précédent</td><td>Serveur MCP (FastMCP) sur une sortie iLEAPP, branche <code>feat/harness-provenance</code>. Dépendance du harness par chemin relatif.</td></tr>
+          <tr><td>iLEAPP</td><td><code>~/iLEAPP</code></td><td>Traitement de l'image iOS en exports. Utilisé une fois par cas, en amont.</td></tr>
+          <tr><td>Langfuse</td><td><code>~/langfuse-local</code></td><td>Compose Docker de Langfuse v4, hors du dépôt (il contient des secrets).</td></tr>
+        </tbody>
+      </table>
+      </div>
+      <figure class="diagram">
+        <div class="scroll-x">
+        <svg viewBox="0 0 880 372" role="img" aria-labelledby="t1-t">
+          <title id="t1-t">Architecture de déploiement : conteneurs, processus du harness, accès réseau</title>
+          <defs>
+            <marker id="t1" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="arrow-head" d="M0,0 L10,5 L0,10 z"/></marker>
+          </defs>
+          <rect class="zone" x="8" y="8" width="632" height="356" rx="10"/>
+          <text x="24" y="30" font-size="13" class="t-b">Hôte d'analyse : Ubuntu, GPU NVIDIA, Docker</text>
+
+          <rect class="zone-solid" x="24" y="44" width="600" height="146" rx="8"/>
+          <text x="36" y="62" font-size="11.5" class="t-muted">conteneurs Docker</text>
+          <rect class="b-model" x="40" y="70" width="170" height="48" rx="6"/>
+          <text x="125" y="90" text-anchor="middle" font-size="12.5" class="t-b t-mono">llama-server</text>
+          <text x="125" y="107" text-anchor="middle" font-size="11" class="t-muted">127.0.0.1:8080 · GPU</text>
+          <rect class="b-model" x="40" y="128" width="170" height="48" rx="6" stroke-dasharray="5 4"/>
+          <text x="125" y="148" text-anchor="middle" font-size="12.5" class="t-b t-mono">llama-moe</text>
+          <text x="125" y="165" text-anchor="middle" font-size="11" class="t-muted">127.0.0.1:8081 · CPU · facultatif</text>
+          <rect class="box" x="300" y="70" width="150" height="48" rx="6"/>
+          <text x="375" y="90" text-anchor="middle" font-size="12.5" class="t-b t-mono">langfuse-web</text>
+          <text x="375" y="107" text-anchor="middle" font-size="11" class="t-muted">:3000 (poste analyste)</text>
+          <rect class="box" x="466" y="70" width="144" height="48" rx="6"/>
+          <text x="538" y="90" text-anchor="middle" font-size="12" class="t-b">volumes</text>
+          <text x="538" y="107" text-anchor="middle" font-size="11" class="t-muted">backup-langfuse.sh</text>
+          <rect class="box" x="300" y="128" width="310" height="48" rx="6"/>
+          <text x="455" y="148" text-anchor="middle" font-size="12">worker · postgres · clickhouse · redis · minio</text>
+          <text x="455" y="165" text-anchor="middle" font-size="11" class="t-muted">127.0.0.1 uniquement</text>
+
+          <rect class="b-code" x="40" y="220" width="220" height="56" rx="6"/>
+          <text x="150" y="243" text-anchor="middle" font-size="12.5" class="t-b">Harness</text>
+          <text x="150" y="261" text-anchor="middle" font-size="11" class="t-mono t-muted">python -m forensic_harness</text>
+          <rect class="b-data" x="300" y="220" width="170" height="56" rx="6"/>
+          <text x="385" y="243" text-anchor="middle" font-size="12.5" class="t-b">iLEAPP-MCP</text>
+          <text x="385" y="261" text-anchor="middle" font-size="11" class="t-muted">sous-processus, stdio</text>
+          <rect class="b-data" x="500" y="220" width="124" height="56" rx="6"/>
+          <text x="562" y="243" text-anchor="middle" font-size="12.5" class="t-b">Sortie iLEAPP</text>
+          <text x="562" y="261" text-anchor="middle" font-size="11" class="t-muted">SQLite mode=ro</text>
+          <rect class="b-data" x="40" y="298" width="220" height="48" rx="6"/>
+          <text x="150" y="318" text-anchor="middle" font-size="12" class="t-mono t-b">runs/&lt;cas&gt;/&lt;UTC&gt;/</text>
+          <text x="150" y="335" text-anchor="middle" font-size="11" class="t-muted">scellé à la clôture</text>
+
+          <line class="line" x1="150" y1="220" x2="150" y2="178" marker-end="url(#t1)"/>
+          <path class="line" d="M232,220 L232,94 L212,94" marker-end="url(#t1)"/>
+          <path class="line" d="M276,220 L276,94 L298,94" marker-end="url(#t1)"/>
+          <text x="236" y="206" font-size="10.5" class="t-muted">/v1</text>
+          <text x="280" y="206" font-size="10.5" class="t-muted">traces</text>
+          <line class="line" x1="260" y1="248" x2="298" y2="248" marker-start="url(#t1)" marker-end="url(#t1)"/>
+          <line class="line" x1="470" y1="248" x2="498" y2="248" marker-end="url(#t1)"/>
+          <line class="line" x1="150" y1="276" x2="150" y2="296" marker-end="url(#t1)"/>
+          <text x="290" y="320" font-size="11" class="t-muted">entrée : ufw + règle DOCKER-USER (firewall.sh)</text>
+          <text x="290" y="338" font-size="11" class="t-muted">sortie : chaîne FORENSIC_AIRGAP (airgap.sh)</text>
+
+          <rect class="b-human" x="690" y="66" width="182" height="58" rx="6"/>
+          <text x="781" y="89" text-anchor="middle" font-size="12.5" class="t-b">Poste de l'analyste</text>
+          <text x="781" y="107" text-anchor="middle" font-size="11" class="t-muted">SSH :22 · Langfuse :3000</text>
+          <line class="line-human" x1="642" y1="95" x2="688" y2="95" marker-start="url(#t1)" marker-end="url(#t1)"/>
+
+          <rect class="box" x="690" y="250" width="182" height="46" rx="6"/>
+          <text x="781" y="278" text-anchor="middle" font-size="12.5">Internet</text>
+          <line class="line-ko" x1="642" y1="273" x2="688" y2="273" stroke-dasharray="5 4"/>
+          <path class="line-ko" d="M658,265 L672,281 M672,265 L658,281" stroke-width="2.2"/>
+          <text x="781" y="316" text-anchor="middle" font-size="11" class="t-ko">coupé en mode isolement</text>
+        </svg>
+        </div>
+        <figcaption><b>Figure 1.</b> Déploiement de référence. Le serveur MCP n'écoute sur aucun port : le harness le
+        lance en sous-processus (transport stdio), un par cas. Seuls SSH et l'interface web de Langfuse sont joignables
+        depuis l'extérieur, et uniquement depuis le poste de l'analyste.</figcaption>
+      </figure>
+    </section>
+
+    <!-- ========================================================================================== -->
+    <section id="reference">
+      <h2>Configuration de référence</h2>
+      <p>Les valeurs ci-dessous sont celles de la machine sur laquelle le harness a été développé et évalué. Les
+      durées et les réglages (couches sur le GPU, contexte, slots) en dépendent directement.</p>
+      <div class="table-wrap">
+      <table>
+        <thead><tr><th>Élément</th><th>Valeur</th></tr></thead>
+        <tbody>
+          <tr><td>GPU</td><td>NVIDIA GeForce RTX 3080, 10 Go</td></tr>
+          <tr><td>CPU</td><td>2 × Intel Xeon E5-2650 v4 (24 cœurs physiques, 48 fils)</td></tr>
+          <tr><td>Mémoire</td><td>128 Go DDR4 ECC</td></tr>
+          <tr><td>Système</td><td>Ubuntu 26.04.1 LTS</td></tr>
+          <tr><td>Pilote NVIDIA</td><td><code>nvidia-driver-595-open</code> (595.91.07)</td></tr>
+          <tr><td>Docker</td><td><code>docker.io</code> 29.1.3, <code>docker-compose-v2</code> 2.40.3, <code>nvidia-container-toolkit</code> 1.20.0</td></tr>
+          <tr><td>Python</td><td>3.14 (<code>.python-version</code>) ; le paquet exige ≥ 3.11</td></tr>
+          <tr><td>Gestionnaire de paquets</td><td><a href="https://docs.astral.sh/uv/">uv</a>, environnement verrouillé par <code>uv.lock</code></td></tr>
+          <tr><td>Image llama.cpp</td><td><code>ghcr.io/ggml-org/llama.cpp@sha256:22684334edfc…d2278</code> (<code>server-cuda</code>, build b10731, épinglée le 2026-09-30)</td></tr>
+          <tr><td>Modèle principal</td><td>Qwen3.8 27B dense, Q4_K_M, blob Ollama <code>sha256-68f0041ed409…6818</code>, alias <code>qwen3.8:latest</code></td></tr>
+          <tr><td>Langfuse</td><td>v4 (web et worker), images épinglées par empreinte</td></tr>
+          <tr><td>Paquets Python clés</td><td><code>langgraph</code> 1.x, <code>langgraph-checkpoint-sqlite</code> 3.x, <code>langchain-openai</code> 1.6+, <code>langchain-mcp-adapters</code> 0.3, <code>langfuse</code> 4.15+, <code>ileapp-mcp[documents]</code> 0.2</td></tr>
+        </tbody>
+      </table>
+      </div>
+    </section>
+
+    <!-- ========================================================================================== -->
+    <section id="installation">
+      <h2>Installation depuis une machine vierge</h2>
+      <p>Les étapes suivent l'ordre des dépendances. Les commandes supposent Ubuntu (24.04 ou plus récent), un compte
+      avec <code>sudo</code>, et un accès à Internet pendant l'installation : la machine n'est isolée qu'ensuite
+      (<a href="#inst-reseau">étape 10</a>).</p>
+
+      <h3 id="inst-systeme"><span class="num">1.</span>Système de base</h3>
+<pre data-title="bash"><code>sudo apt update &amp;&amp; sudo apt upgrade -y
+sudo apt install -y git curl jq tmux openssl ca-certificates gnupg \
+    python3 python3-venv python3-pip build-essential ufw iptables</code></pre>
+      <p><code>tmux</code> sert aux longues exécutions (une analyse ou une évaluation dure des heures) : elles
+      survivent à la fermeture de la session SSH.</p>
+
+      <h3 id="inst-nvidia"><span class="num">2.</span>Pilote NVIDIA</h3>
+<pre data-title="bash"><code>sudo ubuntu-drivers list           <span class="c"># pilotes proposés pour la carte</span>
+sudo ubuntu-drivers install        <span class="c"># installe le pilote recommandé (ici la branche 595, « open »)</span>
+sudo reboot
+nvidia-smi                         <span class="c"># doit afficher la carte et la version du pilote</span></code></pre>
+      <div class="callout warn">
+        Une mise à jour du pilote sans redémarrage laisse <code>nvidia-smi</code> en erreur
+        (« driver/library version mismatch ») et empêche les conteneurs d'accéder au GPU. Redémarrer, puis relancer
+        le serveur d'inférence.
+      </div>
+
+      <h3 id="inst-docker"><span class="num">3.</span>Docker, Compose et accès au GPU</h3>
+<pre data-title="bash"><code>sudo apt install -y docker.io docker-compose-v2
+sudo usermod -aG docker "$USER"     <span class="c"># puis se déconnecter / reconnecter</span>
+
+<span class="c"># NVIDIA Container Toolkit (dépôt officiel NVIDIA)</span>
+curl -fsSL https://nvidia.github.io/libnvidia-container/gpgkey \
+  | sudo gpg --dearmor -o /usr/share/keyrings/nvidia-container-toolkit-keyring.gpg
+curl -s -L https://nvidia.github.io/libnvidia-container/stable/deb/nvidia-container-toolkit.list \
+  | sed 's#deb https://#deb [signed-by=/usr/share/keyrings/nvidia-container-toolkit-keyring.gpg] https://#g' \
+  | sudo tee /etc/apt/sources.list.d/nvidia-container-toolkit.list
+sudo apt update &amp;&amp; sudo apt install -y nvidia-container-toolkit
+sudo nvidia-ctk runtime configure --runtime=docker
+sudo systemctl restart docker
+
+<span class="c"># contrôle : un conteneur voit le GPU</span>
+docker run --rm --gpus all ubuntu nvidia-smi</code></pre>
+
+      <h3 id="inst-uv"><span class="num">4.</span>uv et Python</h3>
+<pre data-title="bash"><code>curl -LsSf https://astral.sh/uv/install.sh | sh   <span class="c"># installe uv et uvx dans ~/.local/bin</span>
+source ~/.local/bin/env
+uv python install 3.14                           <span class="c"># version de .python-version ; uv sync l'installerait sinon</span></code></pre>
+
+      <h3 id="inst-modele"><span class="num">5.</span>Modèle GGUF</h3>
+      <p>Le serveur d'inférence monte un fichier GGUF. Sur la machine de référence, le modèle a été récupéré avec
+      Ollama, qui range chaque fichier sous un nom égal à son SHA-256 : le chemin du blob identifie donc le modèle.
+      Ollama ne sert ici qu'à télécharger : c'est llama.cpp qui exécute le modèle.</p>
+<pre data-title="bash"><code>curl -fsSL https://ollama.com/install.sh | sh
+ollama pull qwen3.8:latest                       <span class="c"># Qwen3.8 27B, Q4_K_M, environ 17 Go</span>
+ls -lh ~/.ollama/models/blobs/sha256-68f0041ed409b99e3620d92c7693029361cef0fb3f13b141d61e25f5a9cd6818
+
+<span class="c"># contrôle d'intégrité : l'empreinte doit être celle du nom du fichier</span>
+sha256sum ~/.ollama/models/blobs/sha256-68f0041ed409b99e3620d92c7693029361cef0fb3f13b141d61e25f5a9cd6818</code></pre>
+      <p>Tout autre GGUF convient, à condition de reporter son chemin dans <code>infra/llama.env</code>, son alias
+      dans <code>MODEL_NAME</code>, puis de <strong>rejouer l'évaluation</strong> : les chiffres publiés ne valent que
+      pour ce modèle. Si Ollama tourne en service, l'arrêter pour libérer le GPU
+      (<code>sudo systemctl disable --now ollama</code>).</p>
+
+      <h3 id="inst-llama"><span class="num">6.</span>Serveur d'inférence llama.cpp</h3>
+      <p>Le serveur est décrit par deux fichiers versionnés : <code>infra/docker-compose.yml</code> (image épinglée par
+      empreinte, port lié à <code>127.0.0.1</code>, réservation GPU) et <code>infra/llama.env</code> (réglages, aucun
+      secret). Ils ne peuvent être utilisés qu'une fois le dépôt du harness cloné (<a href="#inst-harness">étape
+      9</a>) ; l'ordre est ici celui des dépendances logiques.</p>
+<pre data-title="infra/llama.env"><code>MODEL_FILE=/home/&lt;utilisateur&gt;/.ollama/models/blobs/sha256-68f0041ed409b99e3620d92c7693029361cef0fb3f13b141d61e25f5a9cd6818
+MODEL_ALIAS=qwen3.8:latest
+
+<span class="c"># Contexte total, partagé entre les slots : 131072 / 4 = 32768 tokens par appel.</span>
+CTX_TOTAL=131072
+PARALLEL=4
+
+<span class="c"># RTX 3080 (10 Go) : 24 couches sur le GPU, le reste sur le CPU (≈ 3,5 tokens/s en génération).</span>
+GPU_LAYERS=24
+THREADS=24
+KV_CACHE_TYPE=q4_0</code></pre>
+      <p>Le compose traduit ces variables en arguments de <code>llama-server</code> :</p>
+      <div class="table-wrap">
+      <table>
+        <thead><tr><th>Argument</th><th>Valeur</th><th>Effet</th></tr></thead>
+        <tbody>
+          <tr><td><code>-m /models/model.gguf</code></td><td>monté en lecture seule</td><td>le GGUF de l'hôte, toujours vu sous ce chemin dans le conteneur</td></tr>
+          <tr><td><code>--alias</code></td><td><code>${MODEL_ALIAS}</code></td><td>nom renvoyé par <code>/v1/models</code>, à reporter dans <code>MODEL_NAME</code></td></tr>
+          <tr><td><code>--parallel</code></td><td>4</td><td>slots ; le harness ne fait jamais plus de <code>LLM_PARALLEL</code> appels simultanés</td></tr>
+          <tr><td><code>-c</code></td><td>131072</td><td>contexte total, divisé entre les slots</td></tr>
+          <tr><td><code>-fa on</code>, <code>-ctk/-ctv q4_0</code></td><td></td><td>flash attention, cache KV quantifié sur 4 bits</td></tr>
+          <tr><td><code>-ngl</code>, <code>-t</code></td><td>24, 24</td><td>couches sur le GPU, fils CPU</td></tr>
+          <tr><td><code>-b 2048 -ub 512</code>, <code>--numa distribute</code></td><td></td><td>tailles de lot, répartition sur les deux sockets</td></tr>
+          <tr><td><code>--host 0.0.0.0 --port 8080</code></td><td>dans le conteneur</td><td>publié sur l'hôte en <code>127.0.0.1:8080</code> uniquement : l'API n'a pas d'authentification</td></tr>
+        </tbody>
+      </table>
+      </div>
+<pre data-title="bash"><code>cd ~/forensic-langgraph
+docker compose --env-file infra/llama.env -f infra/docker-compose.yml up -d
+docker logs -f llama-server                      <span class="c"># chargement du modèle : plusieurs minutes</span>
+
+curl -s localhost:8080/v1/models | jq '.data[0].id'                         <span class="c"># "qwen3.8:latest"</span>
+curl -s localhost:8080/props | jq '.default_generation_settings.n_ctx, .total_slots'   <span class="c"># 32768, 4</span></code></pre>
+      <p>Changer de version de llama.cpp, de modèle ou de réglage se fait dans ces fichiers versionnés, puis se mesure
+      avec l'évaluation. Le script <code>~/start-llama-server.sh</code> de la machine de référence ne fait que
+      supprimer un ancien conteneur lancé à la main et appeler ce même compose.</p>
+
+      <h3 id="inst-langfuse"><span class="num">7.</span>Langfuse auto-hébergé</h3>
+      <p>Langfuse reçoit les traces de chaque exécution et les expériences d'évaluation. Il garde son propre compose,
+      <strong>hors du dépôt</strong>, parce qu'il contient des secrets. Partir du compose officiel :</p>
+<pre data-title="bash"><code>mkdir -p ~/langfuse-local &amp;&amp; cd ~/langfuse-local
+curl -fsSLo docker-compose.yml https://raw.githubusercontent.com/langfuse/langfuse/main/docker-compose.yml</code></pre>
+      <p>Puis, dans ce fichier :</p>
+      <ol>
+        <li><strong>Remplacer chaque valeur marquée <code># CHANGEME</code></strong> par un secret propre :
+          <code>NEXTAUTH_SECRET</code>, <code>SALT</code>, <code>ENCRYPTION_KEY</code> (64 caractères hexadécimaux), mots
+          de passe de Postgres, ClickHouse, MinIO et Redis (et <code>DATABASE_URL</code> en cohérence). Les ranger dans un
+          <code>.env</code> à côté du compose, en <code>chmod 600</code>.</li>
+        <li><strong>Épingler les images par empreinte</strong> (valeurs de la machine de référence, relevées le
+          2026-09-30) :
+          <div class="table-wrap">
+          <table class="small">
+            <tbody>
+              <tr><td><code>langfuse-web</code></td><td class="wrap"><code>docker.langfuse.com/langfuse/langfuse@sha256:6efeeb58921a44fd043d8b3e47afd6fa9c221a1efc01333f68de7d20e4ca719b</code></td></tr>
+              <tr><td><code>langfuse-worker</code></td><td class="wrap"><code>docker.langfuse.com/langfuse/langfuse-worker@sha256:8c3e33fc503c4e64992a933b248c60b5e409ad4c27c419d6c8f3a42782a44dba</code></td></tr>
+              <tr><td><code>clickhouse</code></td><td class="wrap"><code>docker.io/clickhouse/clickhouse-server@sha256:8a790dd3468db22b1d4e7b18a176f378ff5ff6053b9c48dd4ea1fa71a24c5ba6</code></td></tr>
+              <tr><td><code>minio</code></td><td class="wrap"><code>cgr.dev/chainguard/minio@sha256:bd014394a80898e68c149f2311fdf8d5a2c2f3bb2c33b9327ae6d02b4b065ae1</code></td></tr>
+              <tr><td><code>redis</code></td><td class="wrap"><code>docker.io/redis@sha256:c6eabf748fc7a61dbb5a705c78bcf3d6377b1127a97d0ce965c11c44ba46896f</code></td></tr>
+              <tr><td><code>postgres</code></td><td class="wrap"><code>docker.io/postgres@sha256:f4c66b820c6f974249089d3d16d86a3698eae11e8746eb6644b2271031e91232</code></td></tr>
+            </tbody>
+          </table>
+          </div></li>
+        <li><strong>Vérifier les ports</strong> : seul <code>langfuse-web</code> (3000) est publié sur toutes les
+          interfaces ; worker (3030), Postgres (5432), ClickHouse (8123, 9000), Redis (6379) et MinIO (9090, 9091)
+          restent liés à <code>127.0.0.1</code>.</li>
+        <li>Mettre <code>TELEMETRY_ENABLED=false</code> (aucun appel sortant) et
+          <code>NEXTAUTH_URL=http://&lt;HOTE_ANALYSE&gt;:3000</code>.</li>
+      </ol>
+<pre data-title="bash"><code>openssl rand -hex 32        <span class="c"># ENCRYPTION_KEY</span>
+openssl rand -base64 32     <span class="c"># NEXTAUTH_SECRET, SALT, mots de passe</span>
+docker compose up -d
+docker compose ps           <span class="c"># tous les services « healthy » ou « running »</span></code></pre>
+      <p>Depuis le poste de l'analyste, ouvrir <code>http://&lt;HOTE_ANALYSE&gt;:3000</code>, créer le compte,
+      l'organisation et le projet, puis une paire de clés API (<em>Settings → API Keys</em>). Elles vont dans le
+      <code>.env</code> du harness (<a href="#configuration">Configuration</a>). Les variables
+      <code>LANGFUSE_INIT_*</code> du compose permettent aussi de créer organisation, projet et clés au premier
+      démarrage, sans interface.</p>
+      <div class="callout limit">
+        Conserver le <code>.env</code> de Langfuse à part et en lieu sûr : sans <code>ENCRYPTION_KEY</code> et
+        <code>SALT</code>, une sauvegarde des volumes ne peut pas être déchiffrée. Sur la machine de référence, les
+        mots de passe internes des bases sont encore ceux du compose officiel ; ces bases n'écoutent que sur
+        <code>127.0.0.1</code>, mais il faut les changer.
+      </div>
+
+      <h3 id="inst-ileapp"><span class="num">8.</span>iLEAPP et traitement d'une image</h3>
+<pre data-title="bash"><code>git clone https://github.com/abrignoni/iLEAPP.git ~/iLEAPP
+cd ~/iLEAPP
+python3 -m venv .venv &amp;&amp; .venv/bin/pip install -r requirements.txt
+
+<span class="c"># le dossier de sortie doit exister avant le traitement</span>
+mkdir -p ~/cases/&lt;cas&gt;-iLEAPP_Output
+.venv/bin/python ileapp.py -t tar -i /chemin/vers/extraction.tar -o ~/cases/&lt;cas&gt;-iLEAPP_Output</code></pre>
+      <p>Types d'entrée : <code>fs</code>, <code>tar</code>, <code>zip</code>, <code>gz</code>, <code>itunes</code>,
+      <code>file</code>, et <code>raw</code> pour une image disque (E01, dmg, img…). Le dossier attendu par le harness
+      est celui qui contient <code>_TSV Exports/</code>, <code>_lava_data.lava</code>, <code>_HTML/</code>,
+      <code>_Timeline/</code>, <code>data/</code> et <code>media/</code>.</p>
+      <div class="callout warn">
+        Ne jamais placer le dossier des exécutions (<code>runs/</code>) dans le dossier de preuves : le harness refuse
+        de démarrer. Traiter les sorties iLEAPP comme des preuves : copie de travail, droits en lecture seule
+        (<code>chmod -R a-w</code>) après le traitement.
+      </div>
+
+      <h3 id="inst-harness"><span class="num">9.</span>iLEAPP-MCP et harness</h3>
+      <p>Les deux dépôts se clonent <strong>côte à côte</strong> : <code>pyproject.toml</code> déclare
+      <code>ileapp-mcp = { path = "../iLEAPP-MCP", editable = true }</code>.</p>
+<pre data-title="bash"><code>cd ~
+git clone https://github.com/Wo0keyz/iLEAPP-MCP.git
+git -C iLEAPP-MCP checkout feat/harness-provenance   <span class="c"># provenance par ligne, recherche exacte, texte PDF/DOCX</span>
+git clone &lt;URL_DEPOT_HARNESS&gt; forensic-langgraph
+
+cd forensic-langgraph
+uv sync                                    <span class="c"># crée .venv à partir de uv.lock (Python 3.14)</span>
+cp .env.example .env &amp;&amp; chmod 600 .env     <span class="c"># puis renseigner les clés Langfuse</span>
+uv run pytest -q                           <span class="c"># 111 tests, cas synthétique, faux modèle : aucun serveur requis</span></code></pre>
+      <div class="callout limit">
+        <span class="callout-title">Branche du serveur MCP</span>
+        Au moment de la rédaction, <code>feat/harness-provenance</code> n'existe que dans le clone local de la machine
+        de référence ; le dépôt distant <code>Wo0keyz/iLEAPP-MCP</code> s'arrête à <code>10e4428</code> sur
+        <code>main</code>. Il faut pousser cette branche (ou la fusionner) pour que le clonage ci-dessus, et la CI,
+        fonctionnent. De même, le dépôt du harness n'a pas encore de dépôt distant : <code>&lt;URL_DEPOT_HARNESS&gt;</code>
+        est à définir.
+      </div>
+
+      <h3 id="inst-reseau"><span class="num">10.</span>Pare-feu et isolement</h3>
+      <p>Deux scripts, à lancer avec <code>sudo</code>. Leurs règles <strong>ne survivent pas à un redémarrage</strong> :
+      les relancer après chaque reboot.</p>
+<pre data-title="bash"><code><span class="c"># une fois, depuis la console ou une session SSH déjà ouverte</span>
+sudo infra/firewall.sh &lt;IP_POSTE_ANALYSTE&gt; &lt;INTERFACE&gt;
+
+<span class="c"># avant un vrai dossier</span>
+sudo infra/airgap.sh on &lt;RESEAU_LOCAL&gt;
+sudo infra/airgap.sh status               <span class="c"># doit répondre « Isolement ACTIF »</span>
+ping -c1 1.1.1.1                          <span class="c"># doit échouer</span>
+
+sudo infra/airgap.sh off                  <span class="c"># pour les mises à jour</span></code></pre>
+      <div class="table-wrap">
+      <table>
+        <thead><tr><th>Script</th><th>Ce qu'il fait</th></tr></thead>
+        <tbody>
+          <tr><td><code>firewall.sh</code></td><td><code>ufw</code> : tout refusé en entrée sauf SSH depuis <code>&lt;IP_POSTE_ANALYSTE&gt;</code>. Puis une règle dans la chaîne <code>DOCKER-USER</code> qui rejette toute connexion au port 3000 venant d'une autre adresse sur <code>&lt;INTERFACE&gt;</code> : <code>ufw</code> ne filtre pas les ports publiés par Docker. Affiche enfin les ports TCP en écoute hors localhost (attendu : 22 et 3000).</td></tr>
+          <tr><td><code>airgap.sh on</code></td><td>Crée une chaîne <code>FORENSIC_AIRGAP</code> branchée sur <code>OUTPUT</code> et <code>DOCKER-USER</code>, en IPv4 et IPv6 : seuls la boucle locale, <code>127.0.0.0/8</code>, les réseaux internes de Docker (<code>172.16.0.0/12</code>) et <code>&lt;RESEAU_LOCAL&gt;</code> restent joignables ; tout le reste est rejeté. Appliqué entièrement ou pas du tout (piège <code>EXIT</code>).</td></tr>
+          <tr><td><code>airgap.sh status</code></td><td>Vérifie les trois sauts (OUTPUT v4, DOCKER-USER v4, OUTPUT v6). Code de sortie 1 si l'isolement n'est pas actif.</td></tr>
+        </tbody>
+      </table>
+      </div>
+      <p>Si le poste de l'analyste partage sa connexion Internet avec la machine (câble direct), c'est sur ce poste
+      qu'il faut couper le partage : l'isolement laisse le réseau local joignable.</p>
+
+      <h3 id="inst-verif"><span class="num">11.</span>Vérification de bout en bout</h3>
+<pre data-title="bash"><code>cd ~/forensic-langgraph
+uv run python -m forensic_harness.synthetic_case /tmp/synthetic-benign          <span class="c"># petit cas fictif</span>
+uv run python -m forensic_harness /tmp/synthetic-benign --plan                  <span class="c"># budget mesuré sur le serveur ?</span>
+uv run python -m forensic_harness /tmp/synthetic-benign --no-review             <span class="c"># exécution complète, environ 35 min</span>
+uv run python -m forensic_harness --verify runs/synthetic-benign/&lt;UTC&gt; --manifest-sha256 &lt;empreinte affichée&gt;</code></pre>
+      <p>Attendu : <code>--plan</code> affiche « mesuré » (sinon le serveur d'inférence n'est pas joignable), le run
+      se termine par l'empreinte du manifeste, une trace apparaît dans Langfuse, et <code>--verify</code> répond
+      « Exécution intacte ».</p>
+    </section>
+
+    <!-- ========================================================================================== -->
+    <section id="configuration">
+      <h2>Configuration</h2>
+      <p>Toute la configuration est lue dans l'environnement, chargé depuis <code>.env</code> à la racine du dépôt
+      (<code>forensic_harness/config.py</code>). <code>.env</code> n'est jamais versionné et doit être en
+      <code>chmod 600</code>.</p>
+      <div class="table-wrap">
+      <table>
+        <thead><tr><th>Variable</th><th>Défaut</th><th>Rôle</th></tr></thead>
+        <tbody>
+          <tr><td><code>LLAMA_SERVER_URL</code></td><td><code>http://localhost:8080/v1</code></td><td>Serveur d'inférence principal (API OpenAI).</td></tr>
+          <tr><td><code>MODEL_NAME</code></td><td><code>qwen3.8:latest</code></td><td>Alias du modèle, identique à <code>--alias</code>.</td></tr>
+          <tr><td><code>READ_LLM_URL</code>, <code>READ_MODEL_NAME</code></td><td>vide</td><td>Serveur séparé pour la lecture (voir <a href="#moe">MoE</a>). Vide : serveur principal.</td></tr>
+          <tr><td><code>READ_LLM_CONTAINER</code></td><td><code>llama-moe</code></td><td>Conteneur décrit dans le manifeste pour ce serveur.</td></tr>
+          <tr><td><code>CASE_PATH</code></td><td>vide</td><td>Dossier iLEAPP par défaut, si absent de la ligne de commande.</td></tr>
+          <tr><td><code>LANGFUSE_HOST</code></td><td><code>http://localhost:3000</code></td><td>Langfuse auto-hébergé.</td></tr>
+          <tr><td><code>LANGFUSE_PUBLIC_KEY</code>, <code>LANGFUSE_SECRET_KEY</code></td><td>vide</td><td>Sans elles, l'exécution n'est simplement pas tracée.</td></tr>
+          <tr><td><code>RUNS_DIR</code></td><td><code>runs</code></td><td>Dossier des exécutions.</td></tr>
+          <tr><td><code>LLM_CACHE</code></td><td><code>runs/llm_cache.sqlite</code></td><td>Cache des réponses. Vide : coupé (obligatoire pour mesurer la dispersion).</td></tr>
+          <tr><td><code>CHUNK_TOKENS</code></td><td>8000</td><td>Données par lot de lecture, en tokens.</td></tr>
+          <tr><td><code>LLM_PARALLEL</code> / <code>READ_PARALLEL</code></td><td>4 / 2</td><td>Appels simultanés par serveur (slots).</td></tr>
+          <tr><td><code>MAX_FINDINGS</code></td><td>40</td><td>Au-delà, les constats d'un domaine sont condensés pour l'enquête.</td></tr>
+          <tr><td><code>MAX_SCENARIOS</code></td><td>4</td><td>Scénarios instruits au plus.</td></tr>
+          <tr><td><code>INSTRUCTION_ROUNDS</code></td><td>4</td><td>Tours d'outils par instruction (trois appels par tour).</td></tr>
+          <tr><td><code>TOOL_ROWS</code></td><td>40</td><td>Lignes rendues au modèle par appel d'outil.</td></tr>
+          <tr><td><code>COUNTER_ROUNDS</code></td><td>1</td><td>Reprises de l'instruction demandées par le contradicteur.</td></tr>
+          <tr><td><code>QUALIFICATIONS</code></td><td><code>qualifications_ch.json</code></td><td>Catalogue d'infractions ; son empreinte entre dans celle des prompts.</td></tr>
+          <tr><td><code>MAX_FIELD_CHARS</code></td><td>1000</td><td>Longueur maximale d'un champ transmis ; la coupe est marquée dans le texte.</td></tr>
+          <tr><td><code>LLM_TEMPERATURE</code> / <code>LLM_SEED</code></td><td>0.1 / 0</td><td>Échantillonnage.</td></tr>
+          <tr><td><code>LLM_TIMEOUT_S</code></td><td>3600</td><td>Délai par appel.</td></tr>
+          <tr><td><code>LLM_CONTAINER</code></td><td><code>llama-server</code></td><td>Conteneur inspecté pour le manifeste (image, arguments, fichier du modèle).</td></tr>
+          <tr><td><code>CTX_TOKENS</code> / <code>CHARS_PER_TOKEN</code></td><td>16384 / 2.0</td><td>Repli prudent si le budget ne peut pas être mesuré sur le serveur.</td></tr>
+          <tr><td><code>CORRELATION_LOOKUPS</code></td><td>0</td><td>Tours de recherche accordés à l'agent de corrélation (désactivé par défaut).</td></tr>
+        </tbody>
+      </table>
+      </div>
+      <div class="callout note">
+        Le traçage LangSmith (cloud) est coupé <strong>dans le code</strong> : <code>config.py</code> force
+        <code>LANGSMITH_TRACING</code>, <code>LANGSMITH_TRACING_V2</code>, <code>LANGCHAIN_TRACING</code> et
+        <code>LANGCHAIN_TRACING_V2</code> à <code>false</code> au chargement. Aucune variable ne le réactive.
+      </div>
+    </section>
+
+    <!-- ========================================================================================== -->
+    <section id="cli">
+      <h2>Ligne de commande</h2>
+<pre data-title="bash"><code>uv run python -m forensic_harness CAS [--since DATE] [--until DATE] [--plan] [--no-review]
+uv run python -m forensic_harness --resume EXÉCUTION --draft-sha256 EMPREINTE (--approve --analyst NOM | --reject --note MOTIF)
+uv run python -m forensic_harness --verify EXÉCUTION [--manifest-sha256 EMPREINTE]</code></pre>
+      <div class="table-wrap">
+      <table>
+        <thead><tr><th>Option</th><th>Effet</th></tr></thead>
+        <tbody>
+          <tr><td><code>CAS</code></td><td>Dossier de sortie iLEAPP (ou <code>CASE_PATH</code>).</td></tr>
+          <tr><td><code>--plan</code></td><td>Extraction et mesure du budget, puis coût prévu par domaine (preuves, lots, tokens), sans appeler le modèle. À lancer avant tout gros dossier.</td></tr>
+          <tr><td><code>--since</code>, <code>--until</code></td><td>Fenêtre de dates (ISO, UTC). Une date seule en fin de fenêtre désigne le jour entier ; les preuves sans date sont gardées ; une fenêtre illisible ou inversée est refusée.</td></tr>
+          <tr><td><code>--no-review</code></td><td>Pas d'arrêt avant le rapport (essais, évaluation) : le rapport porte « NON RELU PAR UN ANALYSTE ».</td></tr>
+          <tr><td><code>--resume</code></td><td>Reprise d'une exécution en attente, depuis son point d'arrêt SQLite, sans rappeler le modèle. Exige <code>--draft-sha256</code> et une décision. <code>--approve</code> exige <code>--analyst</code> ; <code>--reject</code> exige <code>--note</code>.</td></tr>
+          <tr><td><code>--verify</code></td><td>Recalcule les empreintes de l'exécution et du dossier de preuves ; liste les écarts. Avec <code>--manifest-sha256</code>, détecte aussi une réécriture complète.</td></tr>
+        </tbody>
+      </table>
+      </div>
+      <h3>Codes de sortie</h3>
+      <div class="table-wrap">
+      <table>
+        <thead><tr><th class="num">Code</th><th>Sens</th></tr></thead>
+        <tbody>
+          <tr><td class="num">0</td><td>Rapport produit sans anomalie (ou <code>--verify</code> : exécution intacte).</td></tr>
+          <tr><td class="num">1</td><td><code>--verify</code> : écarts trouvés.</td></tr>
+          <tr><td class="num">2</td><td>Rapport produit avec des anomalies, listées dans le rapport et sur la sortie d'erreur. Aussi : erreur d'arguments.</td></tr>
+          <tr><td class="num">3</td><td>Analyse faite, brouillon en attente de la décision de l'analyste.</td></tr>
+        </tbody>
+      </table>
+      </div>
+      <h3>Dossier d'exécution</h3>
+      <p>Chaque exécution a son dossier <code>runs/&lt;cas&gt;/&lt;horodatage UTC&gt;/</code>, non versionné. Un dossier
+      déjà utilisé n'est jamais réécrit.</p>
+<pre class="tree no-copy">runs/&lt;cas&gt;/20261003T070014Z/
+├── manifest.json        empreintes des preuves et des livrables, versions, modèle, décision
+├── manifest.sha256      empreinte du manifeste : à consigner hors de la machine
+├── report.md            rapport final (après décision ou avec --no-review)
+├── report.draft.md      brouillon soumis à validation
+├── preuves.json         exactement les preuves citées par le rapport (P1…Pn)
+├── findings.json        constats vérifiés et rejetés, mesures de chaque appel au modèle
+├── extraction.json      toutes les preuves transmises, leur provenance, la couverture
+├── tool_calls.jsonl     journal des appels au serveur MCP, empreinte de chaque résultat
+├── budget.json          contexte mesuré sur le serveur d'inférence
+├── llm/                 chaque prompt envoyé et chaque réponse brute (agent_n.prompt.txt, agent_n.txt)
+├── run.json             durée, anomalies, identifiant de trace Langfuse
+└── checkpoint.sqlite    point d'arrêt LangGraph pour la reprise</pre>
+    </section>
+
+    <!-- ========================================================================================== -->
+    <section id="graphe">
+      <h2>Le graphe LangGraph</h2>
+      <p>Le graphe principal est construit dans <code>forensic_harness/graph.py</code> (<code>build_graph</code>) ; le
+      sous-graphe d'enquête dans <code>forensic_harness/investigate.py</code> (<code>build_enquete</code>).
+      <code>langgraph.json</code> expose le graphe compilé sous le nom <code>profiling</code> pour LangGraph Studio.</p>
+      <figure class="diagram">
+        <div class="scroll-x">
+        <svg viewBox="0 0 880 290" role="img" aria-labelledby="t2-t">
+          <title id="t2-t">Nœuds et arêtes du graphe LangGraph</title>
+          <defs>
+            <marker id="t2" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="arrow-head" d="M0,0 L10,5 L0,10 z"/></marker>
+          </defs>
+          <rect class="box" x="8" y="40" width="62" height="30" rx="15"/>
+          <text x="39" y="60" text-anchor="middle" font-size="11.5" class="t-mono">START</text>
+          <rect class="b-code" x="92" y="40" width="88" height="30" rx="6"/>
+          <text x="136" y="60" text-anchor="middle" font-size="12" class="t-mono">extract</text>
+          <rect class="b-code" x="208" y="4" width="138" height="28" rx="6"/>
+          <text x="277" y="23" text-anchor="middle" font-size="12" class="t-mono">terminal</text>
+          <rect class="b-model" x="208" y="41" width="138" height="28" rx="6"/>
+          <text x="277" y="60" text-anchor="middle" font-size="12" class="t-mono">communications</text>
+          <rect class="b-model" x="208" y="78" width="138" height="28" rx="6"/>
+          <text x="277" y="97" text-anchor="middle" font-size="12" class="t-mono">activite</text>
+          <rect class="b-model" x="370" y="40" width="110" height="30" rx="6"/>
+          <text x="425" y="60" text-anchor="middle" font-size="12" class="t-mono">hypotheses</text>
+
+          <line class="line" x1="70" y1="55" x2="90" y2="55" marker-end="url(#t2)"/>
+          <path class="line" d="M180,55 L192,55 L192,18 L206,18" marker-end="url(#t2)"/>
+          <path class="line" d="M192,55 L206,55" marker-end="url(#t2)"/>
+          <path class="line" d="M192,55 L192,92 L206,92" marker-end="url(#t2)"/>
+          <path class="line" d="M346,18 L358,18 L358,92 L346,92 M346,55 L368,55" marker-end="url(#t2)"/>
+
+          <rect class="zone-solid" x="514" y="8" width="358" height="150" rx="8"/>
+          <text x="526" y="28" font-size="12" class="t-mono t-b">enquete</text>
+          <text x="590" y="28" font-size="11" class="t-muted">sous-graphe compilé, un par Send</text>
+          <rect class="b-model" x="530" y="48" width="112" height="30" rx="6"/>
+          <text x="586" y="68" text-anchor="middle" font-size="12" class="t-mono">instruction</text>
+          <rect class="b-model" x="676" y="48" width="118" height="30" rx="6"/>
+          <text x="735" y="68" text-anchor="middle" font-size="12" class="t-mono">contradiction</text>
+          <rect class="box" x="604" y="112" width="86" height="28" rx="6"/>
+          <text x="647" y="131" text-anchor="middle" font-size="12" class="t-mono">reprise</text>
+          <rect class="box" x="816" y="48" width="46" height="30" rx="6"/>
+          <text x="839" y="68" text-anchor="middle" font-size="12" class="t-mono">fin</text>
+          <line class="line" x1="642" y1="63" x2="674" y2="63" marker-end="url(#t2)"/>
+          <line class="line" x1="794" y1="63" x2="814" y2="63" marker-end="url(#t2)"/>
+          <text x="805" y="96" text-anchor="middle" font-size="10" class="t-muted">done</text>
+          <path class="line-dash" d="M735,78 L735,126 L692,126" marker-end="url(#t2)"/>
+          <text x="742" y="112" font-size="10" class="t-muted">again</text>
+          <path class="line" d="M604,126 L586,126 L586,80" marker-end="url(#t2)"/>
+          <path class="line" d="M480,55 L500,55 L500,63 L528,63" marker-end="url(#t2)"/>
+          <text x="497" y="44" text-anchor="middle" font-size="10.5" class="t-muted">Send</text>
+
+          <rect class="b-model" x="300" y="200" width="120" height="30" rx="6"/>
+          <text x="360" y="220" text-anchor="middle" font-size="12" class="t-mono">qualification</text>
+          <rect class="b-model" x="452" y="200" width="104" height="30" rx="6"/>
+          <text x="504" y="220" text-anchor="middle" font-size="12" class="t-mono">redaction</text>
+          <rect class="b-code" x="640" y="200" width="88" height="30" rx="6"/>
+          <text x="684" y="220" text-anchor="middle" font-size="12" class="t-mono">report</text>
+          <rect class="box" x="790" y="200" width="62" height="30" rx="15"/>
+          <text x="821" y="220" text-anchor="middle" font-size="11.5" class="t-mono">END</text>
+          <line class="line" x1="420" y1="215" x2="450" y2="215" marker-end="url(#t2)"/>
+          <line class="line" x1="556" y1="215" x2="638" y2="215" marker-end="url(#t2)"/>
+          <line class="line" x1="728" y1="215" x2="788" y2="215" marker-end="url(#t2)"/>
+          <rect class="b-human" x="580" y="196" width="18" height="38" rx="3"/>
+          <text x="589" y="221" text-anchor="middle" font-size="12" class="t-human t-b">⏸</text>
+          <text x="597" y="256" text-anchor="middle" font-size="10.5" class="t-muted">interrupt_before=["report"]</text>
+          <text x="597" y="271" text-anchor="middle" font-size="10.5" class="t-muted">(sauf --no-review)</text>
+
+          <path class="line" d="M640,158 L640,182 L410,182 L410,198" marker-end="url(#t2)"/>
+          <path class="line-dash" d="M382,70 L382,198" marker-end="url(#t2)"/>
+          <text x="374" y="140" text-anchor="end" font-size="10.5" class="t-muted">aucun scénario</text>
+        </svg>
+        </div>
+        <figcaption><b>Figure 2.</b> Le graphe. Bleu : nœuds sans modèle. <code>route_scenarios</code> renvoie une liste
+        de <code>Send("enquete", …)</code>, un par scénario (au plus <code>MAX_SCENARIOS</code>), ou
+        <code>"qualification"</code> s'il n'y en a aucun.</figcaption>
+      </figure>
+      <h3>État partagé</h3>
+      <p><code>State</code> est un <code>TypedDict</code>. Les champs écrits par des branches parallèles portent un
+      réducteur :</p>
+      <div class="table-wrap">
+      <table>
+        <thead><tr><th>Champ</th><th>Réducteur</th><th>Contenu</th></tr></thead>
+        <tbody>
+          <tr><td><code>case_path</code>, <code>run_dir</code>, <code>since</code>, <code>until</code></td><td>—</td><td>Entrées et dossier d'exécution.</td></tr>
+          <tr><td><code>budget</code></td><td>—</td><td>Contexte mesuré : <code>n_ctx</code>, <code>chars_per_token</code>, <code>measured</code>.</td></tr>
+          <tr><td><code>results</code></td><td><code>operator.or_</code></td><td>Par domaine puis <code>hypotheses</code>, <code>qualification</code>, <code>redaction</code> : <code>verified</code>, <code>rejected</code>, <code>limits</code>, <code>calls</code>…</td></tr>
+          <tr><td><code>enquetes</code></td><td><code>operator.add</code></td><td>Une entrée par scénario : scénario, instruction, contradiction, verdict, tours.</td></tr>
+          <tr><td><code>errors</code></td><td><code>operator.add</code></td><td>Anomalies d'exécution, imprimées dans le rapport.</td></tr>
+          <tr><td><code>review</code></td><td>—</td><td>Décision de l'analyste, injectée à la reprise.</td></tr>
+          <tr><td><code>final_report</code></td><td>—</td><td>Texte du rapport.</td></tr>
+        </tbody>
+      </table>
+      </div>
+      <p>Les preuves ne transitent pas dans l'état : elles restent sur disque (<code>extraction.json</code>), chargées
+      par <code>load_extraction</code> et protégées par un verrou par dossier (<code>evidence_lock</code>) quand les
+      enquêtes parallèles y ajoutent des lignes. L'état reste ainsi petit pour le point d'arrêt SQLite
+      (<code>AsyncSqliteSaver</code>, <code>checkpoint.sqlite</code>).</p>
+      <h3>Nœuds</h3>
+      <div class="table-wrap">
+      <table>
+        <thead><tr><th>Nœud</th><th>Modèle</th><th>Rôle</th></tr></thead>
+        <tbody>
+          <tr><td><code>extract</code></td><td>non</td><td>Refuse un dossier d'exécution dans les preuves ou déjà utilisé ; empreinte des preuves (<code>manifest.start</code>) ; extraction via MCP ; journal ; revérification des preuves ; mesure du budget.</td></tr>
+          <tr><td><code>terminal</code></td><td>non</td><td><code>profile.terminal_findings</code>.</td></tr>
+          <tr><td><code>communications</code>, <code>activite</code></td><td>oui</td><td>Un appel par lot, en parallèle, puis condensation si plus de <code>MAX_FINDINGS</code> constats. Aucun appel si le domaine est vide.</td></tr>
+          <tr><td><code>hypotheses</code></td><td>oui</td><td>Aucun appel sans signal de comportement. Chaque scénario : titre, au moins deux preuves, <code>kind</code> forcé à <code>hypothese</code>, au plus 4 questions.</td></tr>
+          <tr><td><code>enquete</code></td><td>oui</td><td>Sous-graphe <code>instruction → contradiction → (reprise → instruction)? → fin</code>.</td></tr>
+          <tr><td><code>qualification</code></td><td>oui</td><td>Seulement sur les scénarios retenus (<code>etaye</code>, <code>fragile</code>).</td></tr>
+          <tr><td><code>redaction</code></td><td>oui</td><td>Synthèse, récits, actes ; relance dédiée si la synthèse manque. Aucun appel s'il n'y a rien de vérifié.</td></tr>
+          <tr><td><code>report</code></td><td>non</td><td>Revérifie preuves et code, écrit <code>report.md</code>, <code>preuves.json</code>, <code>findings.json</code>, met à jour le manifeste. La clôture (scellé) est faite par la CLI.</td></tr>
+        </tbody>
+      </table>
+      </div>
+    </section>
+
+    <!-- ========================================================================================== -->
+    <section id="extraction">
+      <h2>Extraction</h2>
+      <p><code>forensic_harness/extract.py</code>. La table <code>SOURCES</code> déclare 46 exports lus par nom exact
+      avec <code>get_raw_artifact_data(artifact_name=…, exact=True)</code> : le serveur ne substitue jamais un artefact
+      au nom voisin. <code>DISCOVER</code> ajoute les exports propres aux applications, trouvés dans
+      <code>list_available_artifacts</code> (format TSV) par expression régulière.</p>
+      <details>
+        <summary><strong>Les 46 exports déclarés</strong> (cliquer pour déplier)</summary>
+        <div class="table-wrap">
+        <table class="small">
+          <thead><tr><th>Domaine</th><th>Exports iLEAPP</th></tr></thead>
+          <tbody>
+            <tr><td><code>terminal</code> (18)</td><td class="wrap">Device Data · System Version plist · Subscriber Info · IMEI - IMSI · SIM - UUID · Trusted Peers · Files App - iCloud Sync Device Names · Account Data · Apps - Installed · Apps - Itunes Metadata · Wipe Indicators · iOS Message Retention · Backup Settings · Find My iPhone Settings · WiFi Known Networks Times · Bluetooth Paired LE · Paired Bluetooth Devices · Bluetooth Paired</td></tr>
+            <tr><td><code>communications</code> (9)</td><td class="wrap">SMS · Call History · Address Book · Gmail - Offline Search · Apple Email · InteractionC - Contacts · Notifications · Signal - Conversations · Calendar Events</td></tr>
+            <tr><td><code>activite</code> (19)</td><td class="wrap">Files App - Files stored in iCloud Drive · Biome - Share Sheet Feedback · Google Drive - Items · iCloud Quick Look · App Store - Searches · Safari Browser - History · Safari Browser - Search Terms · Safari Browser - Recent Web Searches · Safari Browser - Bookmarks · Safari Browser - Tabs (SafariTabs) · Biome - Safari Navigations · Biome - App Intents Transcript · Biome - Keyboard Learned Tokens · Notes · Reminders · Apple Maps Significant Locations Visits (routined) · Apple Maps Significant Locations (routined) · Apple Maps Trips (routined) · knowledgeC - Device Lock Status</td></tr>
+          </tbody>
+        </table>
+        </div>
+      </details>
+      <div class="table-wrap">
+      <table>
+        <thead><tr><th>Motif <code>DISCOVER</code></th><th>Domaine</th><th>Exemples</th></tr></thead>
+        <tbody>
+          <tr><td class="wrap"><code>^(?!Biome)(?:.* )?Messages(?: \(.+\))?$</code></td><td>communications</td><td>Signal - Messages, Zangi Messenger - Messages</td></tr>
+          <tr><td class="wrap"><code>^(?!Biome).*Call History(?: - .+)?$</code></td><td>communications</td><td>journaux d'appels d'applications</td></tr>
+          <tr><td class="wrap"><code>(?: - | )Accounts?$</code></td><td>terminal</td><td>comptes d'applications</td></tr>
+          <tr><td class="wrap"><code> - Contacts$|Contacts &amp; Peers$</code></td><td>communications</td><td>contacts d'applications</td></tr>
+        </tbody>
+      </table>
+      </div>
+      <p><code>Apps - Historical Combined</code> n'est pas lu d'office (environ 80 % de lignes système) : l'enquête le
+      lit sur une période avec <code>lire_source</code>.</p>
+      <h3>Enregistrement d'une preuve</h3>
+      <p><code>_record</code> transforme chaque ligne renvoyée par le serveur. Une ligne sans provenance
+      (<code>evidence_id</code>, <code>source_file</code>) fait échouer l'extraction. Les colonnes vides, les
+      champs de provenance et les colonnes de chemin source d'iLEAPP sont retirés du contenu ; le premier champ dont
+      le nom évoque une date (<code>time|date|created|modified|install</code>) donne l'horodatage, normalisé en UTC
+      (une valeur sans fuseau est UTC, convention iLEAPP). Un champ de plus de <code>MAX_FIELD_CHARS</code>
+      caractères est coupé, avec la mention <code>…[coupé : n caractères de plus]</code>.</p>
+<pre data-title="structure d'une preuve dans extraction.json"><code>{
+ "tag": "E412",                     <span class="c"># attribuée après lecture complète, dans l'ordre de lecture</span>
+ "uid": "EV-3f9a1c2b7d40",          <span class="c"># evidence_id du serveur</span>
+ "source_file": "_TSV Exports/…tsv",
+ "source_table": null,
+ "row_id": 18,
+ "ios_path": "private/var/…",
+ "digest": "c41e07b9d2a8f356",      <span class="c"># row_digest du serveur</span>
+ "ts": "2025-12-12T20:30:00Z",
+ "fields": { "colonne": "valeur", … }
+}</code></pre>
+      <p>Les références <code>E1…En</code> sont attribuées dans l'ordre de lecture : même dossier et même code donnent
+      les mêmes références. Une collision d'<code>evidence_id</code> (même identifiant pour deux emplacements) arrête
+      l'extraction. Un artefact absent du dossier est noté <code>absent</code>, pas en erreur ; toute autre panne est
+      consignée (<code>status: "error"</code>) et signalée au modèle (« ne rien conclure sur cette source »), jamais
+      transformée en liste vide.</p>
+      <h3>Lots et compactage</h3>
+      <p><code>domain_chunks</code> découpe un domaine en lots d'au plus <code>Budget.chunk_chars(…)</code> caractères.
+      Les messages sont regroupés par conversation (première colonne présente parmi <code>Conversation With</code>,
+      <code>Chat Name</code>, <code>Chat Contact ID</code>, <code>Conversation ID</code>, <code>Thread ID</code>,
+      <code>Chat ID</code>). Toute preuve figure dans exactement un lot ; une conversation trop longue continue au lot
+      suivant. <code>_compact</code> réduit le texte sans rien retirer de citable :</p>
+      <ul>
+        <li>une colonne de même valeur sur toutes les lignes d'une conversation (au moins 3 lignes) est écrite une fois en tête ;</li>
+        <li>des lignes <em>consécutives</em> identiques aux dates près sont réunies, avec toutes leurs références et toutes leurs dates ; une ligne à plusieurs dates, ou séparée par une autre, reste seule ;</li>
+        <li>les identifiants internes sont omis.</li>
+      </ul>
+      <p>Gain mesuré sur Magnet : −8 % de texte. Les citations sont vérifiées contre le texte complet de la ligne
+      (<code>record_text</code> : <code>colonne=valeur ; …</code>), pas contre le texte compacté.</p>
+      <h3>Couverture</h3>
+      <p>L'extraction garde la liste des exports du dossier qui n'ont pas été lus (<code>unread</code>, triés par
+      nombre de lignes) : environ 200 sur Magnet. Ils sont accessibles à l'enquête et comptés dans la section
+      « Portée et limites » du rapport, avec, source par source, les lignes totales, transmises, vides et hors
+      fenêtre (<code>coverage_table</code>).</p>
+    </section>
+
+    <!-- ========================================================================================== -->
+    <section id="profil">
+      <h2>Fiche du terminal</h2>
+      <p><code>forensic_harness/profile.py</code>, sans modèle. Deux formes de source :</p>
+      <ul>
+        <li><strong>propriété = valeur</strong> (colonnes <code>Property</code>/<code>Key</code>/<code>Setting</code> et
+        <code>Property Value</code>/<code>Value</code>/<code>Data Value</code>) : une ligne de fiche pour toute la source,
+        limitée aux propriétés utiles (expression <code>PROPERTIES</code>) ;</li>
+        <li><strong>tableau</strong> : une ligne de fiche par ligne distincte aux dates près (au plus
+        <code>MAX_ROWS</code> = 10 par source, valeurs coupées à 120 caractères), les colonnes de secrets
+        (<code>SECRET</code> : mots de passe, codes) et de bruit (<code>NOISE</code>) étant retirées.</li>
+      </ul>
+      <p>Chaque ligne de fiche est un constat de nature <code>fait</code>, signal <code>contexte</code>, qui cite au
+      plus 5 références. <code>_app_signals</code> nomme les applications installées de trois catégories
+      (<code>APP_CATEGORIES</code>), d'après leur identifiant de paquet ; une extension suit son application :</p>
+      <div class="table-wrap">
+      <table>
+        <thead><tr><th>Signal</th><th>Catégorie</th><th>Exemples d'identifiants</th></tr></thead>
+        <tbody>
+          <tr><td><code>canal_discret</code></td><td>messageries chiffrées ou à haute confidentialité</td><td class="wrap"><code>org.whispersystems.signal</code>, <code>chat.simplex.app</code>, <code>com.loki-project.loki-messenger</code>, <code>com.interactive.zangi</code>, <code>ch.threema.</code>, Wickr, Briar, Wire, Element, Telegram, Confide, Keybase, Proton Mail</td></tr>
+          <tr><td><code>dissimulation</code></td><td>VPN, navigation anonyme, coffres-forts</td><td><code>vpn</code>, <code>onionbrowser</code>, <code>torbrowser</code>, <code>keepsafe</code>, <code>privatevault</code>, <code>hiddenvault</code></td></tr>
+          <tr><td><code>contrepartie</code></td><td>portefeuilles et plateformes de cryptomonnaie</td><td>coinbase, binance, exodus, trustwallet, metamask, kraken, electrum, ledgerlive…</td></tr>
+        </tbody>
+      </table>
+      </div>
+      <p>Ces constats sont des signaux de contexte : ils ne suffisent jamais à ouvrir un scénario (le prompt des
+      hypothèses le précise, et le cas témoin Hickman le mesurera).</p>
+    </section>
+
+    <!-- ========================================================================================== -->
+    <section id="llm">
+      <h2>Appels au modèle</h2>
+      <p><code>forensic_harness/llm.py</code>. Le client est <code>langchain_openai.ChatOpenAI</code> pointé sur
+      llama.cpp :</p>
+<pre data-title="forensic_harness/llm.py — _base_llm"><code>ChatOpenAI(
+    base_url=url, api_key="not-needed", model=model,
+    temperature=config.LLM_TEMPERATURE,        <span class="c"># 0.1</span>
+    seed=config.LLM_SEED,                      <span class="c"># 0</span>
+    max_tokens=max_tokens, timeout=config.LLM_TIMEOUT_S, max_retries=1,
+    extra_body={"chat_template_kwargs": {"enable_thinking": False}},
+)</code></pre>
+      <ul>
+        <li><strong>Sortie contrainte.</strong> Chaque agent est lié à un <code>response_format</code> de type
+        <code>json_schema</code> strict (<code>prompts.response_format</code>) : llama.cpp le compile en grammaire, et
+        le modèle ne peut pas sortir de la forme <code>{"findings": [...], "limits": "...", …}</code>. Chaque référence
+        doit correspondre à <code>^E[0-9]{1,7}$</code> ; les champs propres à l'agent (<code>signal</code>,
+        <code>sens</code>, <code>section</code>, <code>verdict</code>…) sont des énumérations.</li>
+        <li><strong>Raisonnement interne coupé.</strong> <code>enable_thinking: false</code> : pas de bloc de
+        réflexion, toute la longueur de réponse va au JSON.</li>
+        <li><strong>Slots.</strong> Un sémaphore par serveur (<code>slot()</code>) limite les appels simultanés à
+        <code>LLM_PARALLEL</code> (ou <code>READ_PARALLEL</code> pour un serveur de lecture séparé), quel que soit le
+        nombre de branches parallèles du graphe.</li>
+        <li><strong>Aucun échec silencieux.</strong> Réponse vide, coupée à <code>max_tokens</code>
+        (<code>finish_reason == "length"</code>), fin anormale ou serveur injoignable : l'exécution continue et
+        l'anomalie va au rapport. Une réponse coupée garde ses constats complets (<code>validate._load</code> referme
+        la liste après le dernier constat entier).</li>
+      </ul>
+      <h3>Un appel d'agent : <code>run_agent</code></h3>
+      <figure class="diagram">
+        <div class="scroll-x">
+        <svg viewBox="0 0 880 190" role="img" aria-labelledby="t3-t">
+          <title id="t3-t">Déroulé de run_agent : appel, journal, analyse, contrôle, relance éventuelle</title>
+          <defs>
+            <marker id="t3" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="arrow-head" d="M0,0 L10,5 L0,10 z"/></marker>
+          </defs>
+          <rect class="b-model" x="8" y="40" width="130" height="52" rx="6"/>
+          <text x="73" y="62" text-anchor="middle" font-size="12" class="t-mono">ask()</text>
+          <text x="73" y="80" text-anchor="middle" font-size="10.5" class="t-muted">slot + cache + schéma</text>
+          <rect class="b-data" x="164" y="40" width="130" height="52" rx="6"/>
+          <text x="229" y="62" text-anchor="middle" font-size="12" class="t-mono">llm/agent_n</text>
+          <text x="229" y="80" text-anchor="middle" font-size="10.5" class="t-muted">prompt + réponse brute</text>
+          <rect class="b-code" x="320" y="40" width="130" height="52" rx="6"/>
+          <text x="385" y="62" text-anchor="middle" font-size="12" class="t-mono">parse_answer</text>
+          <text x="385" y="80" text-anchor="middle" font-size="10.5" class="t-muted">JSON → constats</text>
+          <rect class="b-code" x="476" y="40" width="150" height="52" rx="6"/>
+          <text x="551" y="62" text-anchor="middle" font-size="12" class="t-mono">validate + check</text>
+          <text x="551" y="80" text-anchor="middle" font-size="10.5" class="t-muted">vérifiés / rejetés</text>
+          <rect class="b-ok" x="700" y="14" width="172" height="40" rx="6"/>
+          <text x="786" y="39" text-anchor="middle" font-size="12">aucun rejet : résultat</text>
+          <rect class="b-ko" x="700" y="78" width="172" height="40" rx="6"/>
+          <text x="786" y="103" text-anchor="middle" font-size="12">rejets : 2e essai</text>
+          <line class="line" x1="138" y1="66" x2="162" y2="66" marker-end="url(#t3)"/>
+          <line class="line" x1="294" y1="66" x2="318" y2="66" marker-end="url(#t3)"/>
+          <line class="line" x1="450" y1="66" x2="474" y2="66" marker-end="url(#t3)"/>
+          <path class="line" d="M626,66 L660,66 L660,34 L698,34" marker-end="url(#t3)"/>
+          <path class="line" d="M660,66 L660,98 L698,98" marker-end="url(#t3)"/>
+          <path class="line-dash" d="M786,118 L786,150 L73,150 L73,94" marker-end="url(#t3)"/>
+          <text x="430" y="144" text-anchor="middle" font-size="11" class="t-muted">prompt + rejection_feedback(motifs) ; une relance illisible n'efface pas le premier résultat</text>
+          <text x="430" y="176" text-anchor="middle" font-size="11" class="t-muted">rendu : verified, rejected, limits, extra, retried, first_attempt, unreadable, calls</text>
+        </svg>
+        </div>
+        <figcaption><b>Figure 3.</b> <code>run_agent</code>. <code>check(constat)</code> ajoute les règles propres à
+        l'agent ; les champs de premier niveau de la réponse (<code>verdict</code>, <code>manquants</code>…) sont rendus
+        dans <code>extra</code>.</figcaption>
+      </figure>
+      <h3>Cache des réponses</h3>
+      <p><code>DiskCache</code> (SQLite, WAL) garde les réponses <strong>complètes</strong>
+      (<code>finish_reason == "stop"</code>, texte non vide) des appels avec schéma : lecture, hypothèses, conclusions,
+      rédaction. La clé est le SHA-256 de :</p>
+<pre class="no-copy"><code>taille du GGUF | n_params | ftype | sha256(chat_template)[:16] | build_info     <span class="c"># lus sur /v1/models et /props</span>
+\0 paramètres de l'appel (llm_string)  \0 messages</code></pre>
+      <p>Un autre GGUF sous le même alias ne relit donc pas les réponses de l'ancien. Les tours d'outils de l'enquête
+      ne passent jamais par le cache (ils interrogent réellement le serveur de preuves). Un cache illisible, verrouillé
+      ou plein est contourné, jamais une réponse perdue. <code>LLM_CACHE=</code> (vide) le coupe ;
+      <code>evaluate --runs N</code> avec N &gt; 1 le coupe d'office. Le rapport dit combien de réponses viennent du
+      cache.</p>
+      <h3>Budget de contexte</h3>
+      <p><code>forensic_harness/budget.py</code> mesure le contexte sur le serveur au lieu de le supposer :
+      <code>n_ctx</code> par slot via <code>/props</code>, et le nombre de caractères par token via
+      <code>/tokenize</code> sur un échantillon de 20 000 caractères de vraies lignes de preuve (environ 2 caractères
+      par token sur des lignes pleines d'horodatages et d'identifiants, loin des 3 à 4 du texte courant). Avec un
+      serveur de lecture séparé, le plus petit contexte et la tokenisation la plus dense des deux sont retenus.</p>
+<pre data-title="Budget.chunk_chars"><code>room   = n_ctx − max_tokens − overhead_chars / chars_per_token − 0,05 × n_ctx
+tokens = room                          si whole_context    <span class="c"># hypothèses, enquête, qualification, rédaction, condensation</span>
+       = min(CHUNK_TOKENS, room)       sinon               <span class="c"># lots de lecture</span>
+chars  = max(1000, tokens × chars_per_token)</code></pre>
+      <p>Si la mesure échoue, le budget retombe sur <code>CTX_TOKENS</code> et <code>CHARS_PER_TOKEN</code>, et une
+      anomalie est consignée. Quand un bloc de prompt ne tient pas, il est tronqué avec une mention explicite au modèle
+      (« PARTIEL : n autres … ne t'ont pas été transmis ») et une anomalie au rapport.</p>
+    </section>
+
+    <!-- ========================================================================================== -->
+    <section id="agents">
+      <h2>Agents et prompts</h2>
+      <p>Tous les prompts sont dans <code>forensic_harness/prompts.py</code>, source unique versionnée avec le code.
+      L'empreinte de ce fichier et du catalogue (<code>prompts.digest()</code>) est consignée dans chaque manifeste.
+      Deux régimes : la <strong>lecture</strong> est neutre (elle décrit, ne qualifie pas, ne sait pas ce que contient
+      le dossier) ; l'<strong>enquête</strong> cherche activement ce qui pourrait être illégal, à charge et à décharge.
+      Aucun prompt ne nomme un fait propre à un cas.</p>
+      <div class="table-wrap">
+      <table>
+        <thead><tr><th>Agent</th><th class="num">max_tokens</th><th>Champs propres</th><th>Règles ajoutées par le code</th></tr></thead>
+        <tbody>
+          <tr><td>lecture <code>communications</code>, <code>activite</code></td><td class="num">3000</td><td><code>signal</code> (10 valeurs)</td><td>signal connu ; au plus 15 constats par lot (consigne)</td></tr>
+          <tr><td>condensation</td><td class="num">3000</td><td><code>signal</code></td><td>un constat condensé prend la nature la plus faible des constats dont il reprend les preuves</td></tr>
+          <tr><td><code>hypotheses</code></td><td class="num">2500</td><td><code>titre</code>, <code>questions</code></td><td>titre présent ; ≥ 2 preuves ; <code>kind</code> forcé à <code>hypothese</code> ; ≤ 4 questions ; ≤ <code>MAX_SCENARIOS</code> instruits</td></tr>
+          <tr><td><code>instruction</code></td><td class="num">3000 (+ 800 par tour d'outils)</td><td><code>sens</code> : charge, decharge, contexte</td><td>sens valide ; ne cite que des preuves vues (scénario + outils)</td></tr>
+          <tr><td><code>contradiction</code></td><td class="num">2500</td><td><code>verdict</code>, <code>verifier</code> (premier niveau)</td><td>verdict plafonné (voir <a href="#enquete">Enquête</a>) ; ≤ 3 vérifications</td></tr>
+          <tr><td><code>qualification</code></td><td class="num">3000</td><td><code>scenario</code>, <code>qualification</code> (énumération du catalogue), <code>etat</code> ; <code>manquants</code></td><td>scénario retenu ; qualification du catalogue ; seuls les éléments <code>etabli</code> sont soutenus ; un manquant doit recopier un élément du catalogue</td></tr>
+          <tr><td><code>redaction</code></td><td class="num">3500</td><td><code>section</code>, <code>scenario</code></td><td>section connue ; pas d'acte sans scénario retenu ; un récit porte sur un scénario retenu ; relance si pas de synthèse</td></tr>
+        </tbody>
+      </table>
+      </div>
+      <p>Blocs communs ajoutés à chaque prompt :</p>
+      <ul>
+        <li><code>INTEGRITY_RULE</code> : n'affirmer que ce qui figure dans les données ; une source partielle, absente ou
+        en erreur va dans <code>limits</code>, sans conclusion ;</li>
+        <li><code>OUTPUT_RULES</code> : forme des constats (<code>claim</code>, <code>kind</code>, <code>evidence</code>,
+        <code>quote</code>, <code>auteur</code>), dates et heures recopiées des preuves, aucune référence dans le texte,
+        une absence n'est un constat que si une recherche d'outil l'a montrée ;</li>
+        <li><code>NEUTRALITY</code> (lecture) : « Tu ne sais pas ce que ce dossier contient ni s'il contient quoi que ce
+        soit d'anormal. »</li>
+      </ul>
+      <p>Les signaux : <code>contexte</code>, <code>pression</code>, <code>contrepartie</code>,
+      <code>information_sensible</code>, <code>transfert</code>, <code>canal_discret</code>, <code>dissimulation</code>,
+      <code>faux</code>, <code>acces_tiers</code>, <code>illicite_autre</code>. Leur définition est dans
+      <code>prompts.SIGNALS</code> et dans le <a href="analystes.html#etape-lecture">guide analystes</a>.</p>
+    </section>
+
+    <!-- ========================================================================================== -->
+    <section id="validation">
+      <h2>Contrôle des constats</h2>
+      <p><code>forensic_harness/validate.py</code>, sans modèle. <code>validate(findings, index, allowed)</code> sépare
+      vérifiés et rejetés ; un rejeté porte ses motifs dans <code>reasons</code>. <code>allowed</code> est l'ensemble des
+      références effectivement transmises à <em>cet</em> agent.</p>
+      <div class="table-wrap">
+      <table>
+        <thead><tr><th>Règle</th><th>Implémentation</th></tr></thead>
+        <tbody>
+          <tr><td>Nature connue</td><td><code>kind ∈ {fait, inference, hypothese}</code></td></tr>
+          <tr><td>Longueur</td><td><code>len(claim) ≤ 500</code></td></tr>
+          <tr><td>Références existantes</td><td>chaque référence de <code>evidence</code> est dans l'index des preuves</td></tr>
+          <tr><td>Références transmises</td><td>chaque référence est dans <code>allowed</code></td></tr>
+          <tr><td>Au moins une preuve valide</td><td>quelle que soit la nature, y compris une hypothèse</td></tr>
+          <tr><td>Pas de référence glissée</td><td><code>_TAG_LIKE</code> : <code>E12</code>, <code>e12</code>, <code>E-12</code>, <code>E.12</code>, <code>E 12</code>, et les sosies grec et cyrillique du E, après normalisation NFKC et retrait des caractères invisibles (<code>Cf</code>) ; toute référence du texte doit être dans <code>evidence</code></td></tr>
+          <tr><td>Pas de référence de rapport</td><td><code>_REPORT_REF</code> : <code>P12</code> et ses variantes (une fausse citation)</td></tr>
+          <tr><td>Citation retrouvée</td><td><code>_quoted</code> : la citation est découpée en colonnes (<code> ; </code>), chaque colonne en morceaux (<code>…</code>, <code>...</code>) d'au moins 4 caractères, retrouvés dans l'ordre dans le texte normalisé d'une preuve citée. Le modèle peut donc réordonner les colonnes et couper, pas recoller des mots épars</td></tr>
+          <tr><td>Dates présentes</td><td>dates du constat (ISO, « 12 décembre 2025 », <code>12/03/2025</code>) ⊂ dates des preuves citées (ISO, anglais, <code>12/03/2025</code> lu dans les deux sens)</td></tr>
+          <tr><td>Heures présentes</td><td>heures du constat (<code>20:12</code>, <code>9:05</code>, <code>20h12</code> ; <code>1h30</code> est une durée, ignorée) ⊂ heures des preuves (avec AM/PM)</td></tr>
+          <tr><td>Auteur non contredit</td><td><code>_author_contradiction</code> : compare le champ <code>auteur</code> aux colonnes d'expéditeur (<code>Author</code>, <code>Sender Name</code>, <code>Sender Email</code>, <code>From</code>…) et de sens (<code>Direction</code>, <code>From Me</code>…) des messages cités. Rejet seulement en cas de contradiction nette : un message reçu attribué à l'utilisateur, ou un auteur qui n'est ni l'expéditeur écrit ni compatible avec le sens. Une direction numérique ambiguë (InteractionC) ne conclut rien</td></tr>
+        </tbody>
+      </table>
+      </div>
+      <p>Normalisation commune (<code>_norm</code>) : NFKC, apostrophes et guillemets typographiques ramenés à leur forme
+      simple, espaces et retours réduits, casse ignorée. La relance (<code>rejection_feedback</code>) renvoie au modèle
+      chaque constat rejeté (200 premiers caractères) avec ses motifs.</p>
+      <div class="callout limit">
+        <span class="callout-title">Ce que le contrôle ne fait pas</span>
+        Il ne lit pas le sens. Il compare l'auteur <em>déclaré</em> aux preuves, pas le sujet grammatical de la phrase.
+        Il ne filtre aucun terme accusatoire à l'exécution : les termes interdits ne sont mesurés qu'à l'évaluation
+        (<code>forbidden_terms</code> des jeux témoins).
+      </div>
+    </section>
+
+    <!-- ========================================================================================== -->
+    <section id="enquete">
+      <h2>Enquête</h2>
+      <p><code>forensic_harness/investigate.py</code>. Un sous-graphe par scénario, lancé par <code>Send</code> ; chaque
+      instance ouvre sa propre session MCP (<code>open_case</code>).</p>
+      <h3>Instruction : outils</h3>
+      <p>Le modèle d'instruction est lié aux outils par <code>bind_tools(prompts.INSTRUCTION_TOOLS)</code>, hors cache.
+      <code>call_tool</code> traduit chaque appel vers le serveur MCP :</p>
+      <div class="table-wrap">
+      <table>
+        <thead><tr><th>Outil du modèle</th><th>Outil MCP</th><th>Bornes</th></tr></thead>
+        <tbody>
+          <tr><td><code>rechercher(terme)</code></td><td><code>global_keyword_search(keyword, limit=TOOL_ROWS)</code></td><td>terme ≤ 100 caractères ; filtré par la fenêtre ; sous fenêtre, le total brut n'est pas montré (il trahirait des données hors période)</td></tr>
+          <tr><td><code>lire_source(source, debut?, fin?)</code></td><td><code>get_raw_artifact_data(artifact_name, exact=True)</code>, toutes pages</td><td>filtré par la fenêtre puis par la période demandée ; <code>TOOL_ROWS</code> lignes montrées</td></tr>
+          <tr><td><code>lire_fichier(nom, chemin?)</code></td><td><code>get_file_attachment(file_name, max_chars, path?)</code></td><td>texte en ≤ 8 morceaux de <code>MAX_FIELD_CHARS</code> ; SHA-256 du fichier ; refusé sous fenêtre (un fichier n'est pas daté)</td></tr>
+        </tbody>
+      </table>
+      </div>
+      <p>Chaque ligne rendue est ajoutée à <code>extraction.json</code> (<code>add_records</code>, sous verrou) avec sa
+      provenance et une nouvelle référence <code>E…</code> ; chaque appel est journalisé dans
+      <code>tool_calls.jsonl</code> avec l'agent qui l'a fait. Une réponse d'outil est bornée à 8 000 caractères. Au plus
+      <code>INSTRUCTION_ROUNDS</code> tours de 3 appels ; un appel identique à un précédent est refusé avec un message ;
+      l'instruction s'arrête si le contexte est plein. Quand le modèle répond « terminé » suivi de références, ces
+      preuves décisives (parmi celles qu'il a vues) passent en tête du prompt de conclusion ; si les tours sont
+      épuisés, un appel <code>pick</code> les lui demande.</p>
+      <h3>Contradiction et plafond</h3>
+<pre data-title="forensic_harness/investigate.py — node_contradiction (extrait)"><code>charge = [f for f in instr["verified"] if f["sens"] == "charge"]
+if not charge:                                   <span class="c"># rien à contredire : pas d'appel</span>
+    verdict = "non_etaye"
+...
+if verdict not in prompts.VERDICTS:              <span class="c"># absent ou invalide</span>
+    verdict = "fragile"
+distinct = {t for f in charge for t in f["evidence"]}
+established = [f for f in charge if f["kind"] != "hypothese"]
+if verdict == "etaye" and (len(charge) &lt; 2 or len(distinct) &lt; 2 or not established):
+    verdict = "fragile"                          <span class="c"># anomalie consignée</span></code></pre>
+      <p><code>after_contradiction</code> relance l'instruction (nœud <code>reprise</code>, questions = vérifications du
+      contradicteur) si le verdict est <code>fragile</code>, que des vérifications sont demandées et que
+      <code>round ≤ COUNTER_ROUNDS</code>. Sinon <code>fin</code> ajoute l'enquête à <code>enquetes</code>. Les verdicts
+      <code>etaye</code> et <code>fragile</code> sont retenus (<code>RETAINED</code>).</p>
+    </section>
+
+    <!-- ========================================================================================== -->
+    <section id="qualification">
+      <h2>Qualification et rédaction</h2>
+      <h3>Catalogue</h3>
+      <p><code>forensic_harness/qualifications_ch.json</code> : droit suisse (CP et LStup), statut « PROJET : intitulés
+      et éléments constitutifs résumés pour orienter l'analyse, à faire valider par un juriste avant tout usage. La
+      qualification revient au magistrat. » Onze entrées : <code>CP156</code>, <code>CP181</code>, <code>CP180</code>,
+      <code>CP162</code>, <code>CP273</code>, <code>CP143</code>, <code>CP143bis</code>, <code>CP251</code>,
+      <code>CP146</code>, <code>CP322octies</code>, <code>LStup19</code>, chacune avec <code>id</code>,
+      <code>intitule</code>, <code>base</code> et la liste de ses <code>elements</code>. Un autre droit se branche en
+      fournissant un autre fichier (<code>QUALIFICATIONS</code>) de même forme ; son empreinte change celle des
+      prompts.</p>
+      <h3>Contrôles propres</h3>
+      <ul>
+        <li><code>qualification</code> est une énumération des identifiants du catalogue dans le schéma JSON, et le
+        numéro de scénario doit être celui d'un scénario retenu ;</li>
+        <li>seuls les constats <code>etat == "etabli"</code> sont des éléments soutenus ; les autres vont dans
+        <code>non_etablis</code> (dans <code>findings.json</code>, pas dans le rapport) ;</li>
+        <li>un élément <code>manquant</code> n'est gardé que s'il recopie (après normalisation) un élément du catalogue
+        pour une qualification soutenue, et s'il n'est pas déjà dit soutenu.</li>
+      </ul>
+      <h3>Rédaction</h3>
+      <p>Le rédacteur reçoit le contexte, les scénarios retenus avec leur instruction et leurs objections, les
+      qualifications envisagées, et la chronologie des preuves citées (<code>cited_chronology</code>). Sans aucune
+      preuve à citer, il n'est pas appelé. S'il omet la synthèse, un second appel
+      (<code>SYNTHESIS_ONLY</code>) la demande seule.</p>
+    </section>
+
+    <!-- ========================================================================================== -->
+    <section id="rapport">
+      <h2>Rapport et preuves.json</h2>
+      <p><code>forensic_harness/report.py</code> assemble le rapport par du code, à partir des seuls constats
+      vérifiés. <code>_Refs</code> renumérote les références <code>E…</code> en <code>P1…Pn</code> dans l'ordre
+      d'apparition et note, pour chacune, les sections qui la citent.</p>
+      <div class="table-wrap">
+      <table>
+        <thead><tr><th>Section</th><th>Contenu</th></tr></thead>
+        <tbody>
+          <tr><td>En-tête</td><td>Statut de validation ; exécution ; dossier analysé (fichiers, empreinte d'ensemble, résultat des revérifications) ; nombre de preuves citées ; modèle, fichier, build, température, graine, réponses relues du cache ; modèle de lecture s'il est séparé ; commits du harness et du serveur MCP, empreinte des prompts.</td></tr>
+          <tr><td>1. Synthèse</td><td>Constats <code>section = synthese</code>.</td></tr>
+          <tr><td>2. Terminal et utilisateur</td><td>Fiche du terminal.</td></tr>
+          <tr><td>3. Scénarios retenus</td><td>Par scénario (« Scénario n », sans titre libre) : verdict, hypothèse, éléments à charge et à décharge, objections, récit, qualifications avec éléments établis et manquants.</td></tr>
+          <tr><td>4. Scénarios examinés et non retenus</td><td>Hypothèse et première objection.</td></tr>
+          <tr><td>5. Actes d'enquête suggérés</td><td>Constats <code>section = acte</code>.</td></tr>
+          <tr><td>6. Portée et limites</td><td>Exports lus et non lus, appels d'outils, constats rejetés, anomalies, couverture source par source.</td></tr>
+        </tbody>
+      </table>
+      </div>
+      <p>Les textes libres non vérifiables (titres de scénarios, questions du contradicteur, <code>limits</code> des
+      agents) restent dans <code>findings.json</code>. <code>preuves.json</code> contient exactement les preuves
+      citées : <code>ref</code>, <code>evidence_id</code>, <code>source</code>, <code>export</code>, <code>table</code>,
+      <code>enregistrement</code>, <code>chemin_ios</code>, <code>empreinte_ligne</code>, <code>horodatage_utc</code>,
+      <code>contenu</code>, <code>relire</code> (appel MCP qui renvoie la ligne : <code>get_raw_artifact_data</code>, ou
+      <code>get_file_attachment</code> pour un fichier), <code>cite_dans</code>, <code>reference_interne</code>. Un
+      exemple commenté figure dans le <a href="analystes.html#preuves">guide analystes</a>.</p>
+    </section>
+
+    <!-- ========================================================================================== -->
+    <section id="possession">
+      <h2>Chaîne de possession</h2>
+      <p><code>forensic_harness/manifest.py</code> et <code>forensic_harness/__main__.py</code>.</p>
+      <h3>Manifeste</h3>
+      <div class="table-wrap">
+      <table>
+        <thead><tr><th>Clé</th><th>Contenu</th></tr></thead>
+        <tbody>
+          <tr><td><code>evidence</code></td><td>SHA-256 de chaque fichier du dossier iLEAPP hors <code>data/</code> et <code>media/</code>, puis empreinte d'ensemble (<code>tree_sha256</code>), prise avant toute lecture</td></tr>
+          <tr><td><code>evidence_checks</code>, <code>evidence_unchanged</code></td><td>revérifications après l'extraction et à la fin</td></tr>
+          <tr><td><code>code</code></td><td>commit et état (propre ou modifié) des deux dépôts au début ; versions de <code>forensic-harness</code>, <code>ileapp-mcp</code>, <code>langgraph</code>, <code>langchain-core</code>, <code>langchain-openai</code>, <code>mcp</code> ; version de Python</td></tr>
+          <tr><td><code>code_at_report</code></td><td>commit du harness et empreinte des prompts au moment du rapport ; un écart avec le début est une anomalie</td></tr>
+          <tr><td><code>prompts_sha256</code></td><td>empreinte de <code>prompts.py</code> et du catalogue</td></tr>
+          <tr><td><code>settings</code></td><td>réglages en vigueur : taille des lots, seuils, tours d'enquête, lignes par outil, parallélisme, catalogue, cache</td></tr>
+          <tr><td><code>inference</code></td><td>URL, alias, <code>build_info</code>, chemin du modèle et nombre de slots (<code>/props</code>) ; image, identifiant d'image, arguments et montages du conteneur (<code>docker inspect</code>) ; fichier du modèle côté hôte ; idem sous <code>lecture</code> pour un serveur de lecture séparé</td></tr>
+          <tr><td><code>sampling</code></td><td>température, graine, raisonnement interne coupé</td></tr>
+          <tr><td><code>review</code></td><td>décision de l'analyste, avec l'empreinte du brouillon relu</td></tr>
+          <tr><td><code>outputs_sha256</code>, <code>finished_at</code></td><td>empreinte de chaque fichier de l'exécution, à la clôture</td></tr>
+        </tbody>
+      </table>
+      </div>
+      <h3>Clôture et contrôle</h3>
+      <ul>
+        <li><code>seal</code> écrit <code>outputs_sha256</code>, puis <code>manifest.sha256</code>, puis passe fichiers et
+        dossiers en lecture seule (<code>0444</code>/<code>0555</code>). La CLI affiche l'empreinte du manifeste : à
+        noter hors de la machine.</li>
+        <li><code>verify</code> recalcule tout : <code>manifest.json</code> contre <code>manifest.sha256</code>, contre
+        l'empreinte notée (<code>--manifest-sha256</code>, préfixe accepté), chaque fichier contre
+        <code>outputs_sha256</code> (ajouté, supprimé, modifié), et le dossier de preuves contre
+        <code>tree_sha256</code>.</li>
+        <li><strong>Reprise</strong> (<code>resume</code>) : refusée si le brouillon sur disque n'a pas l'empreinte donnée,
+        ou si l'état enregistré (constats, preuves extraites, manifeste) ne redonne plus ce brouillon. Le rapport final
+        dit ce que disait le brouillon relu, avec la décision en tête.</li>
+        <li>Une exécution lancée depuis LangGraph Studio n'est pas clôturée : la clôture est faite par la CLI.</li>
+      </ul>
+    </section>
+
+    <!-- ========================================================================================== -->
+    <section id="mcp">
+      <h2>Serveur iLEAPP-MCP</h2>
+      <p>Dépôt <code>iLEAPP-MCP</code> (paquet <code>ileapp_mcp</code> 0.2.0, FastMCP, Python ≥ 3.10, licence MIT),
+      branche <code>feat/harness-provenance</code>. Le harness le lance par <code>python -m ileapp_mcp.cli &lt;cas&gt;</code>
+      en transport stdio (<code>forensic_harness/mcp.py</code>, <code>open_case</code>), puis vérifie par
+      <code>get_case_info</code> que le serveur sert bien ce cas, qu'il y a des exports, et que l'index n'est pas
+      tronqué ; sinon l'analyse est refusée. Tous les accès passent par <code>CaseSession.call</code>, qui journalise
+      outil, arguments, durée et SHA-256 du résultat canonique ; aucune erreur n'est avalée.</p>
+      <h3>Garanties de lecture seule</h3>
+      <ul>
+        <li>bases SQLite ouvertes en URI <code>file:…?mode=ro</code> ;</li>
+        <li><code>run_readonly_sql</code> : requêtes <code>SELECT</code>/<code>WITH</code>/<code>EXPLAIN</code>/certains
+        <code>PRAGMA</code> seulement, une seule instruction, liste noire des mots-clés de mutation, puis le mode
+        <code>ro</code> du moteur ;</li>
+        <li>exports TSV/CSV lus par le module <code>csv</code> en mode strict (<code>utf-8-sig</code>) : un fichier
+        illisible fait échouer l'appel au lieu de passer pour un export vide ; les fichiers de l'appareil sous
+        <code>data/</code> ne sont pas indexés ;</li>
+        <li>indexation arrêtée à 2 000 000 d'entrées, signalée par <code>index_truncated</code> ;</li>
+        <li>la reprise automatique du dernier cas (<code>ILEAPP_MCP_RESUME_LAST_CASE</code>) est désactivée par défaut.</li>
+      </ul>
+      <h3>Provenance de chaque ligne</h3>
+<pre data-title="ileapp_mcp/case.py"><code>evidence_id = "EV-" + sha256(f"{source_file}|{source_table or ''}|{row_id}")[:12]
+row_digest  = sha256(contenu de la ligne)[:16]</code></pre>
+      <p>Chaque enregistrement porte <code>source_file</code>, <code>source_table</code>, <code>row_id</code> (numéro
+      d'enregistrement TSV, stable même avec des retours à la ligne dans un champ, ou <code>rowid</code> SQLite),
+      <code>evidence_id</code>, <code>row_digest</code> et <code>source_ios_path</code> (colonne <code>Source File</code>
+      de la ligne si iLEAPP l'a écrite, sinon le <code>source_path</code> de l'artefact dans
+      <code>_lava_data.lava</code>, sinon <code>null</code> : jamais de chemin inventé). Les lignes brutes de
+      <code>get_raw_artifact_data</code> portent ces champs sous <code>_prov</code>. <code>tests/test_provenance.py</code>
+      relit chaque ligne citée sans passer par le code du serveur.</p>
+      <h3>Outils</h3>
+      <div class="table-wrap">
+      <table class="small">
+        <thead><tr><th>Outil</th><th>Utilisé par le harness</th></tr></thead>
+        <tbody>
+          <tr><td><code>get_case_info</code></td><td>oui, à l'ouverture</td></tr>
+          <tr><td><code>list_available_artifacts</code></td><td>oui, découverte et couverture</td></tr>
+          <tr><td><code>get_raw_artifact_data</code></td><td>oui, extraction et <code>lire_source</code></td></tr>
+          <tr><td><code>global_keyword_search</code></td><td>oui, <code>rechercher</code></td></tr>
+          <tr><td><code>get_file_attachment</code></td><td>oui, <code>lire_fichier</code> (texte PDF et DOCX avec l'extra <code>documents</code>)</td></tr>
+          <tr><td class="wrap"><code>load_case</code>, <code>get_device_info</code>, <code>get_messages</code>, <code>get_call_history</code>, <code>get_location_history</code>, <code>get_web_activity</code>, <code>get_installed_apps</code>, <code>get_timeline</code>, <code>run_readonly_sql</code>, <code>get_health_data</code>, <code>get_notes_and_memos</code>, <code>get_photos_metadata</code>, <code>get_network_connections</code>, <code>get_system_state</code>, <code>decode_plist_or_protobuf</code>, <code>get_cloud_identities</code></td><td>non : le harness lit les exports bruts tels qu'iLEAPP les a produits, sans normalisation intermédiaire</td></tr>
+        </tbody>
+      </table>
+      </div>
+      <p>Les outils paginés acceptent au plus 250 éléments par page ; <code>CaseSession.fetch_all</code> parcourt toutes
+      les pages et compte les lignes vides écartées par le serveur.</p>
+    </section>
+
+    <!-- ========================================================================================== -->
+    <section id="observabilite">
+      <h2>Observabilité</h2>
+      <ul>
+        <li><strong>Langfuse</strong> : si les clés sont présentes, <code>run</code> attache un
+        <code>langfuse.langchain.CallbackHandler</code> à l'invocation du graphe (nom « investigation &lt;cas&gt; »,
+        métadonnées cas et dossier). L'identifiant de trace est écrit dans <code>run.json</code>. L'évaluation inscrit
+        chaque exécution notée comme expérience (voir <a href="#evaluation">Évaluation</a>).</li>
+        <li><strong>Fichiers</strong> : <code>llm/</code> garde chaque prompt et chaque réponse brute ;
+        <code>findings.json</code> les mesures de chaque appel (agent, caractères, tokens, secondes, cache) ;
+        <code>tool_calls.jsonl</code> chaque appel MCP.</li>
+        <li><strong>LangGraph Studio</strong>, en local uniquement : <code>./launch_studio.sh</code> lance
+        <code>langgraph dev --host 127.0.0.1 --port 2024</code>, sans tunnel (l'API de développement n'a pas
+        d'authentification et lit des preuves). Accès distant par <code>ssh -L 2024:localhost:2024 &lt;HOTE_ANALYSE&gt;</code>.</li>
+      </ul>
+    </section>
+
+    <!-- ========================================================================================== -->
+    <section id="evaluation">
+      <h2>Évaluation</h2>
+      <p><code>forensic_harness/evaluate.py</code> rejoue le graphe sur un cas (<code>--case</code>, <code>--runs N</code>)
+      ou note des exécutions existantes (<code>--score</code>), contre un jeu de données
+      (<code>datasets/*.json</code>).</p>
+      <h3>Jeux de données</h3>
+      <div class="table-wrap">
+      <table>
+        <thead><tr><th>Fichier</th><th>Cas</th><th>Contenu</th></tr></thead>
+        <tbody>
+          <tr><td><code>magnet_ground_truth.json</code></td><td>Image publique iPhone 14 Plus, iOS 18.0 (CTF Magnet)</td><td>18 faits (<code>GT-01…18</code>), 3 scénarios (<code>SC-1…3</code>) ; sources auditées export par export (<code>source_audit</code>)</td></tr>
+          <tr><td><code>hickman_ios17.json</code></td><td>Image publique iOS 17 de Joshua Hickman (Digital Corpora, <code>corpora/mobile/iOS17</code>)</td><td>cas tenu à l'écart, aucune infraction ; à traiter d'abord par iLEAPP vers <code>~/cases/iOS17-Hickman-iLEAPP_Output</code></td></tr>
+          <tr><td><code>synthetic_ambiguous.json</code></td><td><code>python -m forensic_harness.synthetic_case DOSSIER --ambigu</code></td><td>6 faits, 16 termes interdits, aucun scénario ne doit être retenu</td></tr>
+          <tr><td><code>synthetic_benign.json</code></td><td><code>python -m forensic_harness.synthetic_case DOSSIER</code></td><td>6 faits, 14 termes interdits</td></tr>
+        </tbody>
+      </table>
+      </div>
+      <p>Règle de détection d'un fait (<code>match</code>) : une chaîne (mot entier, insensible à la casse et aux
+      apostrophes typographiques), <code>digits:</code> (chiffres d'un même numéro, quels que soient les séparateurs),
+      <code>re:</code> (expression régulière), ou <code>{"all": [...]}</code> / <code>{"any": [...]}</code>. Un scénario a
+      un <code>match</code> sur sa description et un <code>evidence_match</code> sur les preuves citées. Un terme interdit
+      nié dans sa proposition (« aucun », « pas », « sans »…) ne compte pas comme accusation.</p>
+      <h3>Commandes</h3>
+<pre data-title="bash"><code><span class="c"># rejouer 5 fois et noter</span>
+uv run python -m forensic_harness.evaluate --dataset datasets/magnet_ground_truth.json \
+    --case ~/cases/iPhone14Plus-CTF-MAGNET-iLEAPP_Output --runs 5
+
+<span class="c"># noter une exécution existante (aucun appel au modèle)</span>
+uv run python -m forensic_harness.evaluate --dataset datasets/magnet_ground_truth.json --score runs/&lt;cas&gt;/&lt;UTC&gt;
+
+<span class="c"># vérifier que le jeu tient face au dossier (exports cités présents, valeurs retrouvées)</span>
+uv run python -m forensic_harness.evaluate --dataset datasets/magnet_ground_truth.json --case &lt;dossier&gt; --audit
+
+<span class="c"># noter un ancien rapport en texte libre (faits énoncés seulement)</span>
+uv run python -m forensic_harness.evaluate --dataset datasets/magnet_ground_truth.json --report ancien_rapport.md
+
+<span class="c"># échouer sur régression</span>
+uv run python -m forensic_harness.evaluate … --gate seuils.json</code></pre>
+<pre data-title="seuils.json"><code>{"min": {"scenario_recall": 0.66, "citation_validity": 0.9}}          <span class="c"># cas de référence</span>
+{"max": {"invented_accusations": 0, "scenarios_retained": 0}}           <span class="c"># cas témoin</span></code></pre>
+      <p>Une mesure absente d'une exécution (exécution sans constat) fait échouer le seuil. Les résultats sont écrits
+      dans <code>eval_results/</code> (ou <code>--out</code>), non versionné.</p>
+      <h3>Campagne complète : <code>infra/evaluation.sh</code></h3>
+<pre data-title="bash"><code>git tag phase36-fixes                         <span class="c"># l'étiquette évaluée</span>
+tmux new -d -s eval 'bash infra/evaluation.sh phase36-fixes 3'
+
+<span class="c"># variante nommée : même code, autre réglage (ex. lecture sur le serveur MoE)</span>
+READ_LLM_URL=http://localhost:8081/v1 READ_MODEL_NAME=qwen3.6-35b-a3b \
+    bash infra/evaluation.sh phase36-fixes 3 moe</code></pre>
+      <p>Le script clone le dépôt dans <code>runs/real/eval-&lt;étiquette&gt;[-variante]/frozen</code>, se place sur
+      l'étiquette, réutilise le <code>.venv</code> et le <code>.env</code> du dépôt, coupe le cache
+      (<code>LLM_CACHE=</code>), génère les deux cas synthétiques, rejoue Magnet, Hickman (s'il existe), ambigu et bénin,
+      tient un <code>journal.txt</code>, et assemble <code>RESULTATS.md</code>.</p>
+      <div class="callout warn">
+        <code>evaluation.sh</code> contient des chemins absolus de la machine de référence (dépôt sous
+        <code>/home/&lt;utilisateur&gt;/forensic-langgraph</code>, Magnet sous
+        <code>/home/&lt;utilisateur&gt;/iPhone14Plus-CTF-MAGNET-iLEAPP_Output</code>, Hickman sous
+        <code>/home/&lt;utilisateur&gt;/cases/iOS17-Hickman-iLEAPP_Output</code>) : les adapter avant usage.
+      </div>
+      <h3>Langfuse</h3>
+      <p>Avec les clés renseignées, <code>push_langfuse</code> inscrit chaque exécution notée comme expérience :
+      <em>Datasets</em> → jeu → passage nommé d'après le dossier d'exécution, toutes les mesures en scores. Langfuse
+      n'exécute rien : il range et compare. N'y partent que les mesures, les identifiants de faits et de scénarios, et
+      les chemins.</p>
+    </section>
+
+    <!-- ========================================================================================== -->
+    <section id="resultats">
+      <h2>Résultats de la campagne <code>phase36-fixes</code></h2>
+      <p>Campagne du 2 au 3 octobre 2026, 3 exécutions par cas, modèle <code>qwen3.8:latest</code> sur toutes les
+      étapes, cache coupé. Hickman : non évalué (dossier absent au moment de la campagne). Valeurs : moyenne (min–max).</p>
+      <div class="table-wrap">
+      <table class="small">
+        <thead><tr><th>Mesure</th><th class="num">Magnet</th><th class="num">Ambigu</th><th class="num">Bénin</th></tr></thead>
+        <tbody>
+          <tr><td>Scénarios attendus retrouvés</td><td class="num">100 % (100–100)</td><td class="num">n/a</td><td class="num">n/a</td></tr>
+          <tr><td>Scénarios retenus par exécution</td><td class="num">2,33 (2–3)</td><td class="num">0,33 (0–1)</td><td class="num">0 (0–0)</td></tr>
+          <tr><td>Scénarios examinés par exécution</td><td class="num">3 (3–3)</td><td class="num">2 (2–2)</td><td class="num">0 (0–0)</td></tr>
+          <tr><td>Rappel du rapport principal</td><td class="num">61 % (61–61)</td><td class="num">89 % (83–100)</td><td class="num">50 % (50–50)</td></tr>
+          <tr><td>Rappel de la lecture</td><td class="num">82 % (78–83)</td><td class="num">100 %</td><td class="num">100 %</td></tr>
+          <tr><td>Rappel hors faits d'appréciation</td><td class="num">65 % (65–65)</td><td class="num">89 % (83–100)</td><td class="num">50 % (50–50)</td></tr>
+          <tr><td>Fait seulement énoncé</td><td class="num">61 % (61–61)</td><td class="num">89 % (83–100)</td><td class="num">67 % (67–67)</td></tr>
+          <tr><td>Plafond de rappel</td><td class="num">89 % (89–89)</td><td class="num">100 %</td><td class="num">100 %</td></tr>
+          <tr><td>Source exacte des faits retrouvés</td><td class="num">100 %</td><td class="num">100 %</td><td class="num">100 %</td></tr>
+          <tr><td>Citations valides (après relance)</td><td class="num">97 % (97–97)</td><td class="num">86 % (72–92)</td><td class="num">51 % (51–51)</td></tr>
+          <tr><td>Citations valides au premier essai</td><td class="num">94 % (92–95)</td><td class="num">87 % (68–99)</td><td class="num">43 % (43–43)</td></tr>
+          <tr><td>Constats émis sans preuve valide</td><td class="num">0 %</td><td class="num">0 %</td><td class="num">0 %</td></tr>
+          <tr><td>Réponses illisibles par exécution</td><td class="num">0</td><td class="num">0</td><td class="num">0</td></tr>
+          <tr><td>Faits couverts par un même constat (max)</td><td class="num">2,67 (2–3)</td><td class="num">2</td><td class="num">1</td></tr>
+          <tr><td>Constats « empilement de mots-clés »</td><td class="num">1 (0–2)</td><td class="num">0</td><td class="num">0</td></tr>
+          <tr><td>Accusations inventées par exécution</td><td class="num">0</td><td class="num">0</td><td class="num">0</td></tr>
+          <tr><td>Constats vérifiés par exécution</td><td class="num">322,7 (321–325)</td><td class="num">57 (49–71)</td><td class="num">21 (21–21)</td></tr>
+          <tr><td>Constats imprimés dans le rapport</td><td class="num">120,7 (112–131)</td><td class="num">24 (13–43)</td><td class="num">7 (7–7)</td></tr>
+          <tr><td>Temps de modèle par exécution</td><td class="num">45 724 s (40 770–50 601)</td><td class="num">3 985 s (3 615–4 356)</td><td class="num">2 175 s (2 159–2 206)</td></tr>
+        </tbody>
+      </table>
+      </div>
+      <ul class="small">
+        <li><strong>Magnet</strong> — faits hors d'atteinte (absents des preuves transmises) : GT-08, GT-09. Jamais
+        retrouvés dans le rapport : GT-07, GT-11, GT-12, GT-16, GT-18. Scénarios SC-1, SC-2, SC-3 : 100 %.
+        Qualifications envisagées : CP143, CP146, CP156, CP162, CP180, CP181, CP251, CP273.</li>
+        <li><strong>Ambigu</strong> — SY-06 retrouvé dans 33 % des exécutions.</li>
+        <li><strong>Bénin</strong> — SY-03, SY-04, SY-06 jamais retrouvés dans le rapport.</li>
+        <li>Durée murale de la campagne : environ 17 h pour Magnet (3 exécutions), 3 h 15 pour ambigu, 1 h 30 pour bénin.</li>
+      </ul>
+      <p>Graphiques et lecture commentée : <a href="analystes.html#resultats">guide analystes</a>.</p>
+    </section>
+
+    <!-- ========================================================================================== -->
+    <section id="tests">
+      <h2>Tests et CI</h2>
+      <p>111 tests collectés par pytest (<code>asyncio_mode = "auto"</code>), sur un cas synthétique et un faux modèle :
+      aucun serveur d'inférence requis.</p>
+      <div class="table-wrap">
+      <table>
+        <thead><tr><th>Fichier</th><th>Couvre</th></tr></thead>
+        <tbody>
+          <tr><td><code>tests/test_pipeline.py</code></td><td>Le graphe de bout en bout : tout est lu sans plafond, couverture de chaque source, messages exportés tels quels, aucun appel sans données, pannes d'outil et exports corrompus signalés, réponses vides ou coupées, cas qui ne se mélangent pas, UTC, traçage cloud coupé, provenance réelle.</td></tr>
+          <tr><td><code>tests/test_robustesse.py</code></td><td>Texte non vérifié hors du rapport, références <code>P…</code> rejetées, échappement Markdown, champs malformés, plafond « étayé », pas de contradicteur sans charge, fenêtre de dates, citations coupées ou réordonnées, preuves décisives, pas d'acte sans scénario retenu, envoi à Langfuse.</td></tr>
+          <tr><td><code>tests/test_custody.py</code></td><td>Manifeste, empreintes, scellé et <code>--verify</code>, preuves modifiées pendant ou après l'exécution, dossier d'exécution dans les preuves refusé, décision liée au brouillon relu, altération entre pause et reprise, code changé, rejet, rapport non relu, CLI.</td></tr>
+          <tr><td><code>tests/test_evaluate.py</code></td><td>Règles de détection, faits comptés seulement avec la preuve, empilements, source exacte, négations, agrégation et seuils, audit du jeu.</td></tr>
+          <tr><td><code>tests/test_smoke.py</code></td><td>Chargement du graphe ; le serveur MCP sert le cas demandé.</td></tr>
+        </tbody>
+      </table>
+      </div>
+<pre data-title="bash"><code>uv run pytest -q
+uv run ruff check . &amp;&amp; uv run ruff format --check .</code></pre>
+      <p><code>.github/workflows/ci.yml</code> clone les deux dépôts côte à côte, installe en mode verrouillé
+      (<code>uv sync --locked</code>), lance ruff, pytest et <code>pip-audit</code> sur les dépendances exportées. Le
+      serveur MCP a sa propre CI (Python 3.10 à 3.13, ruff, mypy, pip-audit, bandit) et sa suite de tests, dont
+      <code>test_provenance.py</code>.</p>
+    </section>
+
+    <!-- ========================================================================================== -->
+    <section id="moe">
+      <h2>Serveur de lecture MoE (facultatif)</h2>
+      <p>La lecture des preuves fait l'essentiel des appels. Un second serveur peut la prendre en charge, sans toucher
+      au serveur principal : Qwen3.6-35B-A3B (mixture of experts, 3 milliards de paramètres actifs par token),
+      quantifié UD-Q4_K_XL par Unsloth, sur le CPU seul, même image llama.cpp.</p>
+<pre data-title="infra/llama-moe.env"><code><span class="c"># SHA-256 vérifié au téléchargement : 707a55a8a4397ecde44de0c499d3e68c1ad1d240d1da65826b4949d1043f4450</span>
+MODEL_FILE=/home/&lt;utilisateur&gt;/models/Qwen3.6-35B-A3B-UD-Q4_K_XL.gguf
+MODEL_ALIAS=qwen3.6-35b-a3b
+CTX_TOTAL=65536
+PARALLEL=2
+GPU_LAYERS=0
+THREADS=24</code></pre>
+<pre data-title="bash"><code>docker compose --env-file infra/llama-moe.env -f infra/docker-compose.moe.yml up -d   <span class="c"># 127.0.0.1:8081</span>
+READ_LLM_URL=http://localhost:8081/v1 READ_MODEL_NAME=qwen3.6-35b-a3b READ_PARALLEL=2 \
+    uv run python -m forensic_harness &lt;cas&gt;</code></pre>
+      <p>Seules la lecture et sa condensation passent par ce serveur ; hypothèses, enquête, qualification et rédaction
+      restent sur le serveur principal. Le budget de contexte prend le plus petit des deux serveurs ; le manifeste et
+      l'en-tête du rapport décrivent les deux modèles. Ce réglage n'est pas celui des résultats publiés : il se juge
+      avec <code>infra/evaluation.sh &lt;étiquette&gt; 3 moe</code>.</p>
+    </section>
+
+    <!-- ========================================================================================== -->
+    <section id="depannage">
+      <h2>Limites connues et dépannage</h2>
+      <div class="table-wrap">
+      <table>
+        <thead><tr><th>Symptôme ou limite</th><th>Cause, conduite à tenir</th></tr></thead>
+        <tbody>
+          <tr><td>« budget de contexte non mesuré »</td><td>Le serveur d'inférence ne répond pas sur <code>/props</code> ou <code>/tokenize</code>. Vérifier <code>docker ps</code>, <code>docker logs llama-server</code> et <code>LLAMA_SERVER_URL</code>.</td></tr>
+          <tr><td>« réponse coupée à n tokens »</td><td>Le modèle a atteint <code>max_tokens</code>. Les constats complets sont gardés ; si cela se répète, réduire <code>CHUNK_TOKENS</code>.</td></tr>
+          <tr><td>« Index du cas tronqué » / « ce n'est pas une sortie iLEAPP »</td><td>Mauvais dossier passé au harness : donner le dossier qui contient <code>_TSV Exports/</code>.</td></tr>
+          <tr><td>« dossier d'exécution déjà utilisé »</td><td>Une exécution ne se réécrit pas : relancer crée un nouveau dossier horodaté.</td></tr>
+          <tr><td>Reprise refusée</td><td>Empreinte du brouillon différente, ou état enregistré qui ne redonne plus le brouillon (code modifié entre-temps). Ne pas éditer le brouillon : le rejeter avec un motif et relancer.</td></tr>
+          <tr><td>Port 3000 joignable par d'autres postes après un reboot</td><td>La règle <code>DOCKER-USER</code> ne survit pas au redémarrage : relancer <code>firewall.sh</code>.</td></tr>
+          <tr><td>Isolement inactif après un reboot</td><td>Relancer <code>airgap.sh on</code> puis <code>status</code>.</td></tr>
+          <tr><td>Sauvegarde de Langfuse</td><td><code>infra/backup-langfuse.sh</code> arrête les services le temps de la copie (jamais pendant une analyse), archive chaque volume avec <code>SHA256SUMS</code>. Le <code>.env</code> de Langfuse n'est pas copié ; la restauration n'a pas été testée.</td></tr>
+          <tr><td>Reproductibilité au mot près</td><td>Non garantie à température 0,1 et graine fixe : l'évaluation mesure la dispersion sur plusieurs exécutions.</td></tr>
+          <tr><td>Fichier du modèle</td><td>Identifié par son chemin ; un blob Ollama porte son SHA-256 dans son nom, le harness ne le recalcule pas.</td></tr>
+          <tr><td>Rendu de longue durée</td><td>Lancer dans <code>tmux</code> : une analyse de la taille de Magnet dure plus de 12 h de temps de modèle sur la configuration de référence.</td></tr>
+        </tbody>
+      </table>
+      </div>
+    </section>
+
+    <!-- ========================================================================================== -->
+    <section id="annexe">
+      <h2>Annexe : ancien guide d'installation</h2>
+      <p>La machine de référence garde un guide antérieur au harness,
+      <code>GUIDE_INSTALLATION_QWEN3.8_LLAMA_CPP.md</code>. Il décrit une autre chaîne, interactive : l'agent terminal
+      <strong>Charm Crush</strong> branché sur iLEAPP-MCP, avec des « skills » d'enquête, devant le même modèle.</p>
+      <div class="table-wrap">
+      <table>
+        <thead><tr><th></th><th>Ancien guide</th><th>Configuration actuelle (versionnée)</th></tr></thead>
+        <tbody>
+          <tr><td>Lancement</td><td><code>docker run --rm -it</code> depuis <code>start-llama-server.sh</code>, image <code>:server-cuda</code> non épinglée</td><td><code>infra/docker-compose.yml</code>, image épinglée par empreinte</td></tr>
+          <tr><td>Port</td><td><code>-p 8080:8080</code> (toutes interfaces)</td><td><code>127.0.0.1:8080</code></td></tr>
+          <tr><td>Contexte</td><td>150 000 tokens, un seul slot</td><td>131 072 tokens, 4 slots de 32 768</td></tr>
+          <tr><td>Couches GPU</td><td><code>-ngl 12</code></td><td><code>-ngl 24</code></td></tr>
+          <tr><td>Décodage</td><td>spéculatif MTP (<code>--spec-type draft-mtp --spec-draft-n-max 4</code>)</td><td>standard</td></tr>
+          <tr><td>Orchestration</td><td>agent Crush interactif, skills Markdown</td><td>graphe LangGraph, prompts versionnés, contrôle par le code</td></tr>
+        </tbody>
+      </table>
+      </div>
+      <p>Ce guide n'est plus à suivre pour le harness : il est conservé pour l'historique. La configuration qui fait foi
+      est celle de <code>infra/</code>.</p>
+    </section>
+
+    <p class="footer">Documentation établie à partir du code : harness <code>71905ce</code>, iLEAPP-MCP
+    <code>47a630f</code> (branche <code>feat/harness-provenance</code>), configuration de la machine de référence au
+    5 octobre 2026.</p>
+  </main>
+</div>
+</body>
+</html>
