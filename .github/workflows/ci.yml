@@ -1,0 +1,31 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      # le harness dépend du serveur MCP par chemin relatif : les deux dépôts côte à côte
+      - uses: actions/checkout@v4
+        with:
+          path: forensic-langgraph
+      - uses: actions/checkout@v4
+        with:
+          repository: Wo0keyz/iLEAPP-MCP
+          # Cette branche doit exister sur le dépôt distant : au 2026-09-30 elle n'est que locale.
+          # La pousser (ou la fusionner dans main et changer cette ligne) avant d'activer la CI.
+          ref: feat/harness-provenance
+          path: iLEAPP-MCP
+      - uses: astral-sh/setup-uv@v6
+      - name: Install (locked)
+        working-directory: forensic-langgraph
+        run: uv sync --locked
+      - name: Lint
+        working-directory: forensic-langgraph
+        run: uv run ruff check . && uv run ruff format --check .
+      - name: Audit des dépendances
+        working-directory: forensic-langgraph
+        run: uv export --no-emit-project --no-emit-package ileapp-mcp --format requirements-txt > req.txt && uvx pip-audit -r req.txt --disable-pip

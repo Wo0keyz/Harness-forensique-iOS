@@ -1,0 +1,48 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "forensic-harness"
+version = "0.1.0"
+description = "Harness d'investigation forensique iOS : LangGraph + iLEAPP-MCP + LLM local"
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+    "langgraph>=1.2,<2",
+    "langgraph-checkpoint-sqlite>=3,<4",  # reprise après la validation humaine
+    "langchain>=1,<2",  # requis par l'intégration LangChain de Langfuse
+    "langchain-core>=1.6,<2",
+    "langchain-openai>=1.6,<2",
+    "langchain-mcp-adapters>=0.3,<0.4",
+    "langfuse>=4.15,<5",
+    "python-dotenv>=1.0",
+    "ileapp-mcp[documents]>=0.2",  # provenance par enregistrement, recherche exacte d'artefact, texte des PDF
+]
+
+[dependency-groups]
+dev = [
+    "pytest>=8",
+    "pytest-asyncio>=0.23",
+    "ruff>=0.5",
+    "langgraph-cli[inmem]>=0.4",
+]
+
+[tool.uv.sources]
+# Le serveur MCP vit dans un dépôt voisin ; les deux dépôts se clonent côte à côte.
+ileapp-mcp = { path = "../iLEAPP-MCP", editable = true }
+
+[tool.hatch.build.targets.wheel]
+packages = ["forensic_harness"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+asyncio_mode = "auto"
+
+[tool.ruff]
+line-length = 110
+target-version = "py311"
+
+[tool.ruff.lint]
+select = ["E", "W", "F", "I", "B", "C4", "UP", "SIM"]
+ignore = ["E501"]

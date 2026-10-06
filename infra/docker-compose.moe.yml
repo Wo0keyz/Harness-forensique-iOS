@@ -1,0 +1,44 @@
+# Second serveur d'inférence, sur le CPU seul : modèle MoE (3 milliards de paramètres actifs par token)
+# pour la lecture. Le serveur principal (docker-compose.yml, port 8080) n'est pas touché.
+#
+#   docker compose --env-file infra/llama-moe.env -f infra/docker-compose.moe.yml up -d
+#
+# Même image épinglée que le serveur principal, sans accès au GPU : llama.cpp charge alors son
+# moteur CPU. Après un redémarrage (pilote NVIDIA à jour), le GPU pourra porter l'attention
+# (-ngl 99 --n-cpu-moe N) : voir llama-moe.env.
+name: forensic-inference-moe
+
+services:
+  moe:
+    container_name: llama-moe
+    image: ghcr.io/ggml-org/llama.cpp@sha256:22684334edfce1e33db30924aade61ea57c898c37d26067b9d914979f86d2278
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:8081:8080" # jamais sur 0.0.0.0 : l'API n'a pas d'authentification
+    volumes:
+      - "${MODEL_FILE:?chemin du fichier GGUF (voir llama-moe.env)}:/models/model.gguf:ro"
+    command:
+      - "-m"
+      - "/models/model.gguf"
+      - "--alias"
+      - "${MODEL_ALIAS}"
+      - "--parallel"
+      - "${PARALLEL}"
+      - "-c"
+      - "${CTX_TOTAL}"
+      - "-fa"
+      - "on"
+      - "-ngl"
+      - "${GPU_LAYERS}"
+      - "-t"
+      - "${THREADS}"
+      - "-b"
+      - "2048"
+      - "-ub"
+      - "512"
+      - "--numa"
+      - "distribute"
+      - "--host"
+      - "0.0.0.0"
+      - "--port"
+      - "8080"

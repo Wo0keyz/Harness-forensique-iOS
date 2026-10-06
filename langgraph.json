@@ -1,0 +1,7 @@
+{
+  "dependencies": ["."],
+  "graphs": {
+    "profiling": "./forensic_harness/graph.py:graph"
+  },
+  "env": ".env"
+}

@@ -1,0 +1,13 @@
+.env
+.venv*
+__pycache__/
+*.pyc
+.langgraph_api/
+.pytest_cache/
+.ruff_cache/
+runs/
+eval_results/
+studio.log
+# sorties de l'ancien harness (écrites à côté du code)
+rapport_profiling_*.md
+profil_numerique_*.json

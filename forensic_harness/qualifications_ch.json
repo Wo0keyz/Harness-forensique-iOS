@@ -1,0 +1,28 @@
+{
+ "droit": "Suisse — Code pénal (CP) et loi sur les stupéfiants (LStup)",
+ "statut": "PROJET : intitulés et éléments constitutifs résumés pour orienter l'analyse, à faire valider par un juriste avant tout usage. La qualification revient au magistrat.",
+ "qualifications": [
+  {"id": "CP156", "intitule": "Extorsion et chantage", "base": "art. 156 CP",
+   "elements": ["dessein de se procurer ou de procurer à un tiers un enrichissement illégitime", "violence ou menace d'un dommage sérieux", "la victime est déterminée à un acte préjudiciable à ses intérêts ou à ceux d'un tiers"]},
+  {"id": "CP181", "intitule": "Contrainte", "base": "art. 181 CP",
+   "elements": ["violence, menace d'un dommage sérieux ou autre entrave à la liberté d'action", "la victime est obligée à faire, à ne pas faire ou à laisser faire un acte"]},
+  {"id": "CP180", "intitule": "Menaces", "base": "art. 180 CP",
+   "elements": ["menace grave", "la victime est alarmée ou effrayée"]},
+  {"id": "CP162", "intitule": "Violation du secret de fabrication ou du secret commercial", "base": "art. 162 CP",
+   "elements": ["un secret de fabrication ou commercial", "une obligation légale ou contractuelle de le garder", "révélation du secret, ou utilisation de cette révélation à son profit ou à celui d'un tiers"]},
+  {"id": "CP273", "intitule": "Service de renseignements économiques", "base": "art. 273 CP",
+   "elements": ["un secret de fabrication ou d'affaires", "cherché pour, ou rendu accessible à, un organisme ou une entreprise étrangers ou leurs agents"]},
+  {"id": "CP143", "intitule": "Soustraction de données", "base": "art. 143 CP",
+   "elements": ["données enregistrées électroniquement qui ne sont pas destinées à l'auteur", "données spécialement protégées contre tout accès indu", "dessein d'enrichissement illégitime"]},
+  {"id": "CP143bis", "intitule": "Accès indu à un système informatique", "base": "art. 143bis CP",
+   "elements": ["introduction sans droit dans un système informatique d'autrui", "système spécialement protégé contre tout accès"]},
+  {"id": "CP251", "intitule": "Faux dans les titres", "base": "art. 251 CP",
+   "elements": ["création d'un titre faux, falsification d'un titre, ou constatation fausse d'un fait ayant une portée juridique", "dessein de nuire ou de procurer un avantage illicite"]},
+  {"id": "CP146", "intitule": "Escroquerie", "base": "art. 146 CP",
+   "elements": ["tromperie astucieuse", "la victime est induite ou confortée dans une erreur", "acte préjudiciable aux intérêts pécuniaires de la victime ou d'un tiers", "dessein d'enrichissement illégitime"]},
+  {"id": "CP322octies", "intitule": "Corruption privée active / passive", "base": "art. 322octies et 322novies CP",
+   "elements": ["avantage indu offert, promis, octroyé, sollicité ou accepté", "en faveur d'un employé, associé, mandataire ou auxiliaire d'un tiers, dans le secteur privé", "pour un acte ou une omission en relation avec son activité professionnelle, contraire à ses devoirs ou dépendant de son appréciation"]},
+  {"id": "LStup19", "intitule": "Infraction à la loi sur les stupéfiants", "base": "art. 19 LStup",
+   "elements": ["stupéfiants", "culture, fabrication, détention, acquisition, vente, transport ou cession sans droit"]}
+ ]
+}

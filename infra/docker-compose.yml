@@ -1,0 +1,56 @@
+# Serveur d'inférence local. Remplace le menu interactif start-llama-server.sh : la configuration
+# est un fichier versionné (llama.env), l'image est épinglée par empreinte.
+#
+#   docker compose --env-file infra/llama.env -f infra/docker-compose.yml up -d
+#
+# Si un conteneur « llama-server » lancé à la main existe déjà : docker rm -f llama-server d'abord.
+# Attention : cela interrompt toute analyse en cours, et le modèle met plusieurs minutes à se recharger.
+name: forensic-inference
+
+services:
+  llama:
+    container_name: llama-server
+    # ghcr.io/ggml-org/llama.cpp:server-cuda tel qu'il tournait le 2026-09-30 (build b10731).
+    # Changer de version = changer cette ligne, puis rejouer l'évaluation.
+    image: ghcr.io/ggml-org/llama.cpp@sha256:22684334edfce1e33db30924aade61ea57c898c37d26067b9d914979f86d2278
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:8080:8080" # jamais sur 0.0.0.0 : l'API n'a pas d'authentification
+    volumes:
+      - "${MODEL_FILE:?chemin du fichier GGUF (voir llama.env)}:/models/model.gguf:ro"
+    command:
+      - "-m"
+      - "/models/model.gguf"
+      - "--alias"
+      - "${MODEL_ALIAS}"
+      - "--parallel"
+      - "${PARALLEL}"
+      - "-c"
+      - "${CTX_TOTAL}"
+      - "-fa"
+      - "on"
+      - "-ctk"
+      - "${KV_CACHE_TYPE}"
+      - "-ctv"
+      - "${KV_CACHE_TYPE}"
+      - "-ngl"
+      - "${GPU_LAYERS}"
+      - "-t"
+      - "${THREADS}"
+      - "-b"
+      - "2048"
+      - "-ub"
+      - "512"
+      - "--numa"
+      - "distribute"
+      - "--host"
+      - "0.0.0.0"
+      - "--port"
+      - "8080"
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
