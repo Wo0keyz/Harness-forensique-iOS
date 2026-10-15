@@ -1,0 +1,1003 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Résultats d'évaluation</title>
+<meta name="description" content="Résultats de la campagne d'évaluation du harness forensique iOS : 35 exécutions sur Magnet, Hickman (cas tenu à l'écart) et deux cas témoins.">
+<link rel="stylesheet" href="assets/style.css">
+<script src="assets/site.js"></script>
+</head>
+<body>
+
+<header class="topbar">
+  <div class="topbar-inner">
+    <a class="brand" href="index.html"><span class="brand-mark" aria-hidden="true"></span>Harness forensique iOS</a>
+    <nav class="tabs" aria-label="Pages">
+      <a href="index.html">Accueil</a>
+      <a href="analystes.html">Guide analystes</a>
+      <a href="resultats.html" aria-current="page">Résultats</a>
+      <a href="technique.html">Documentation technique</a>
+    </nav>
+    <button class="theme-toggle" type="button">Thème sombre</button>
+  </div>
+</header>
+
+<div class="layout">
+  <aside class="toc">
+    <details open>
+      <summary>Sommaire</summary>
+      <p class="toc-title">Résultats</p>
+      <ol>
+        <li><a href="#en-bref">En bref</a></li>
+        <li><a href="#campagne">La campagne</a></li>
+        <li><a href="#synthese">Les quatre cas côte à côte</a></li>
+        <li><a href="#magnet">Magnet</a></li>
+        <li><a href="#hickman">Hickman, cas tenu à l'écart</a></li>
+        <li><a href="#temoins">Cas témoins</a></li>
+        <li><a href="#evolution">Par rapport à la première publication</a></li>
+        <li><a href="#durees">Durées et volumes</a></li>
+        <li><a href="#lecture">Comment lire ces chiffres</a></li>
+        <li><a href="#tableau">Tableau complet</a></li>
+        <li><a href="#reproduire">Reproduire</a></li>
+      </ol>
+    </details>
+  </aside>
+
+  <main class="content">
+    <h1>Résultats d'évaluation</h1>
+    <p class="subtitle">Campagne terminée le 13 octobre 2026 · 35 exécutions · Qwen3.8 27B sur toutes les étapes</p>
+
+    <!-- ========================================================================================== -->
+    <section id="en-bref">
+      <p class="lead">Sur le cas qui a servi à le régler (Magnet), le harness retrouve les trois scénarios attendus
+      <strong>à chaque exécution</strong>, et ses citations tiennent. Sur un vrai téléphone qu'il n'avait jamais vu
+      (Hickman), ses citations tiennent aussi, mais <strong>il retient parfois un scénario là où il n'y a pas
+      d'infraction</strong>. C'est la principale limite que met au jour cette campagne.</p>
+      <div class="kpis">
+        <div class="kpi ok"><div class="v">100 %</div><div class="l">scénarios attendus retrouvés sur Magnet, 10 exécutions sur 10</div></div>
+        <div class="kpi ok"><div class="v">0 %</div><div class="l">constats émis sans preuve valide, sur les 35 exécutions</div></div>
+        <div class="kpi ok"><div class="v">95 %</div><div class="l">citations valides sur Hickman, jamais vu au réglage (97 % sur Magnet)</div></div>
+        <div class="kpi"><div class="v">68 %</div><div class="l">des faits connus repris dans le rapport principal, Magnet comme Hickman</div></div>
+        <div class="kpi ko"><div class="v">3 / 5</div><div class="l">exécutions Hickman qui retiennent un scénario, sur un téléphone sans infraction</div></div>
+        <div class="kpi ko"><div class="v">2 / 10</div><div class="l">exécutions du témoin ambigu qui retiennent un scénario à tort</div></div>
+        <div class="kpi ko"><div class="v">1 / 5</div><div class="l">exécution Hickman avec des accusations inventées (2 phrases)</div></div>
+        <div class="kpi warn"><div class="v">80 %</div><div class="l">citations valides sur le témoin bénin, très variables</div></div>
+      </div>
+      <div class="callout note">
+        <span class="callout-title">Ce qui remplace quoi</span>
+        Cette page remplace les chiffres publiés le 3 octobre, tirés de 3 exécutions par cas et sans Hickman. Le code
+        évalué est le même (étiquette <code>phase36-fixes</code>). Ce qui change : le nombre d'exécutions, le premier
+        passage sur Hickman, et des jeux de données corrigés après audit (voir
+        <a href="#evolution">Par rapport à la première publication</a>).
+      </div>
+    </section>
+
+    <!-- ========================================================================================== -->
+    <section id="campagne">
+      <h2>La campagne</h2>
+      <p>Chaque cas est exécuté plusieurs fois de bout en bout, sans cache des réponses du modèle et sans arrêt pour
+      validation, sur une copie figée du code. Les exécutions de la première série (2 au 9 octobre) sont gardées, et
+      une série complémentaire (9 au 13 octobre) porte Magnet et les deux témoins à 10 exécutions, Hickman à 5. Toutes
+      sont ensuite <strong>renotées ensemble</strong>, par du code, contre les jeux de données corrigés.</p>
+      <figure class="diagram">
+        <div class="scroll-x">
+<svg viewBox="0 0 880 262" role="img" aria-labelledby="r1-t">
+<title id="r1-t">Composition de la campagne : 10 exécutions pour Magnet et chaque témoin, 5 pour Hickman, toutes renotées ensemble avec les jeux corrigés</title>
+<defs><marker id="r1" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="arrow-head" d="M0,0 L10,5 L0,10 z"/></marker></defs>
+<text x="8" y="30" font-size="13" class="t-b">Magnet</text>
+<text x="8" y="47" font-size="11" class="t-muted">iOS 18 public · réglage</text>
+<rect class="dot-a" x="200" y="20" width="20" height="20" rx="4"/>
+<rect class="dot-a" x="226" y="20" width="20" height="20" rx="4"/>
+<rect class="dot-a" x="252" y="20" width="20" height="20" rx="4"/>
+<rect class="dot-b" x="278" y="20" width="20" height="20" rx="4"/>
+<rect class="dot-b" x="304" y="20" width="20" height="20" rx="4"/>
+<rect class="dot-b" x="330" y="20" width="20" height="20" rx="4"/>
+<rect class="dot-b" x="356" y="20" width="20" height="20" rx="4"/>
+<rect class="dot-b" x="382" y="20" width="20" height="20" rx="4"/>
+<rect class="dot-b" x="408" y="20" width="20" height="20" rx="4"/>
+<rect class="dot-b" x="434" y="20" width="20" height="20" rx="4"/>
+<text x="200" y="56" font-size="10.5" class="t-muted">3 · 2–3 oct.</text>
+<text x="278" y="56" font-size="10.5" class="t-muted">7 · 9–11 oct.</text>
+<line class="line" x1="464" y1="30" x2="486" y2="30" />
+<text x="8" y="88" font-size="13" class="t-b">Hickman</text>
+<text x="8" y="105" font-size="11" class="t-muted">iOS 17 public · tenu à l'écart</text>
+<rect class="dot-a" x="200" y="78" width="20" height="20" rx="4"/>
+<rect class="dot-a" x="226" y="78" width="20" height="20" rx="4"/>
+<rect class="dot-a" x="252" y="78" width="20" height="20" rx="4"/>
+<rect class="dot-b" x="278" y="78" width="20" height="20" rx="4"/>
+<rect class="dot-b" x="304" y="78" width="20" height="20" rx="4"/>
+<text x="200" y="114" font-size="10.5" class="t-muted">3 · 5–9 oct.</text>
+<text x="278" y="114" font-size="10.5" class="t-muted">2 · 11–13 oct.</text>
+<line class="line" x1="334" y1="88" x2="486" y2="88" />
+<text x="8" y="146" font-size="13" class="t-b">Témoin ambigu</text>
+<text x="8" y="163" font-size="11" class="t-muted">synthétique</text>
+<rect class="dot-a" x="200" y="136" width="20" height="20" rx="4"/>
+<rect class="dot-a" x="226" y="136" width="20" height="20" rx="4"/>
+<rect class="dot-a" x="252" y="136" width="20" height="20" rx="4"/>
+<rect class="dot-b" x="278" y="136" width="20" height="20" rx="4"/>
+<rect class="dot-b" x="304" y="136" width="20" height="20" rx="4"/>
+<rect class="dot-b" x="330" y="136" width="20" height="20" rx="4"/>
+<rect class="dot-b" x="356" y="136" width="20" height="20" rx="4"/>
+<rect class="dot-b" x="382" y="136" width="20" height="20" rx="4"/>
+<rect class="dot-b" x="408" y="136" width="20" height="20" rx="4"/>
+<rect class="dot-b" x="434" y="136" width="20" height="20" rx="4"/>
+<text x="200" y="172" font-size="10.5" class="t-muted">3 · 3 oct.</text>
+<text x="278" y="172" font-size="10.5" class="t-muted">7 · 9 oct.</text>
+<line class="line" x1="464" y1="146" x2="486" y2="146" />
+<text x="8" y="204" font-size="13" class="t-b">Témoin bénin</text>
+<text x="8" y="221" font-size="11" class="t-muted">synthétique</text>
+<rect class="dot-a" x="200" y="194" width="20" height="20" rx="4"/>
+<rect class="dot-a" x="226" y="194" width="20" height="20" rx="4"/>
+<rect class="dot-a" x="252" y="194" width="20" height="20" rx="4"/>
+<rect class="dot-b" x="278" y="194" width="20" height="20" rx="4"/>
+<rect class="dot-b" x="304" y="194" width="20" height="20" rx="4"/>
+<rect class="dot-b" x="330" y="194" width="20" height="20" rx="4"/>
+<rect class="dot-b" x="356" y="194" width="20" height="20" rx="4"/>
+<rect class="dot-b" x="382" y="194" width="20" height="20" rx="4"/>
+<rect class="dot-b" x="408" y="194" width="20" height="20" rx="4"/>
+<rect class="dot-b" x="434" y="194" width="20" height="20" rx="4"/>
+<text x="200" y="230" font-size="10.5" class="t-muted">3 · 3 oct.</text>
+<text x="278" y="230" font-size="10.5" class="t-muted">7 · 9 oct.</text>
+<line class="line" x1="464" y1="204" x2="486" y2="204" />
+<path class="line" d="M486,30 L500,30 L500,204 L486,204 M500,117 L528,117" marker-end="url(#r1)"/>
+<rect class="b-code" x="530" y="72" width="170" height="90" rx="6"/>
+<text x="615" y="98" text-anchor="middle" font-size="12.5" class="t-b">Renotation commune</text>
+<text x="615" y="117" text-anchor="middle" font-size="11.5">jeux corrigés le 5 oct.</text>
+<text x="615" y="134" text-anchor="middle" font-size="11.5">aucun appel au modèle</text>
+<text x="615" y="151" text-anchor="middle" font-size="11" class="t-muted">13 oct.</text>
+<line class="line" x1="700" y1="117" x2="728" y2="117" marker-end="url(#r1)"/>
+<rect class="b-data" x="730" y="86" width="142" height="62" rx="6"/>
+<text x="801" y="112" text-anchor="middle" font-size="12.5" class="t-b">Synthèse</text>
+<text x="801" y="130" text-anchor="middle" font-size="11" class="t-muted">moyenne (min–max)</text>
+<rect class="dot-a" x="200" y="240" width="12" height="12" rx="3"/>
+<text x="218" y="250" font-size="11.5" class="t-muted">première série</text>
+<rect class="dot-b" x="330" y="240" width="12" height="12" rx="3"/>
+<text x="348" y="250" font-size="11.5" class="t-muted">série complémentaire</text>
+<text x="530" y="250" font-size="11.5" class="t-muted">même code figé (étiquette phase36-fixes), cache coupé</text>
+</svg>
+        </div>
+        <figcaption><b>Figure 1.</b> Composition de la campagne. Hickman compte moins d'exécutions parce qu'une
+        exécution y dure environ 30 heures. La renotation ne rappelle pas le modèle : elle relit les dossiers
+        d'exécution déjà écrits.</figcaption>
+      </figure>
+      <div class="table-wrap">
+      <table>
+        <thead><tr><th>Cas</th><th>Nature</th><th>Vérité terrain</th><th>Bon résultat</th></tr></thead>
+        <tbody>
+          <tr><td><strong>Magnet</strong></td><td>Image publique d'un iPhone 14 Plus, iOS 18 (CTF). A servi à régler les prompts.</td><td>18 faits, 3 scénarios</td><td>Retrouver les 3 scénarios et un maximum de faits</td></tr>
+          <tr><td><strong>Hickman</strong></td><td>Image publique iOS 17 (Digital Corpora), usage quotidien documenté. <strong>Tenue à l'écart</strong> : jamais regardée pour régler quoi que ce soit.</td><td>8 faits, aucune infraction</td><td>Retrouver les faits, ne retenir aucun scénario</td></tr>
+          <tr><td><strong>Témoin ambigu</strong></td><td>Cas synthétique : des éléments qui ressemblent à des signaux, mais innocents.</td><td>6 faits, aucun scénario</td><td>Ne retenir aucun scénario</td></tr>
+          <tr><td><strong>Témoin bénin</strong></td><td>Cas synthétique sans aucun incident.</td><td>6 faits, aucun scénario</td><td>Ne retenir aucun scénario</td></tr>
+        </tbody>
+      </table>
+      </div>
+      <p class="small muted">Les mesures sont définies dans le guide analystes, section
+      <a href="analystes.html#evaluation">Comment la qualité est mesurée</a>. Toutes les valeurs sont données en
+      moyenne, avec l'étendue (minimum–maximum) entre parenthèses.</p>
+    </section>
+
+    <!-- ========================================================================================== -->
+    <section id="synthese">
+      <h2>Les quatre cas côte à côte</h2>
+      <figure class="diagram">
+        <div class="scroll-x">
+<svg viewBox="0 0 880 364" role="img" aria-labelledby="r2-t">
+<title id="r2-t">Comparaison des quatre cas : citations valides, rappel de la lecture, rappel du rapport</title>
+<line class="grid-line" x1="200" y1="24" x2="200" y2="334"/>
+<text x="200" y="352" text-anchor="middle" font-size="11" class="t-muted">0 %</text>
+<line class="grid-line" x1="345" y1="24" x2="345" y2="334"/>
+<text x="345" y="352" text-anchor="middle" font-size="11" class="t-muted">25 %</text>
+<line class="grid-line" x1="490" y1="24" x2="490" y2="334"/>
+<text x="490" y="352" text-anchor="middle" font-size="11" class="t-muted">50 %</text>
+<line class="grid-line" x1="635" y1="24" x2="635" y2="334"/>
+<text x="635" y="352" text-anchor="middle" font-size="11" class="t-muted">75 %</text>
+<line class="grid-line" x1="780" y1="24" x2="780" y2="334"/>
+<text x="780" y="352" text-anchor="middle" font-size="11" class="t-muted">100 %</text>
+<rect class="fill-ok" x="200" y="4" width="12" height="12" rx="2"/>
+<text x="218" y="14" font-size="11.5" class="t-muted">Citations valides (après relance)</text>
+<rect class="fill-data" x="400" y="4" width="12" height="12" rx="2"/>
+<text x="418" y="14" font-size="11.5" class="t-muted">Rappel de la lecture</text>
+<rect class="fill-code" x="600" y="4" width="12" height="12" rx="2"/>
+<text x="618" y="14" font-size="11.5" class="t-muted">Rappel du rapport principal</text>
+<text x="8" y="60" font-size="13" class="t-b">Magnet</text>
+<text x="8" y="77" font-size="11" class="t-muted">10 exécutions</text>
+<g><title>Magnet — Citations valides (après relance) : 97 % (92 %–99 %)</title>
+<rect class="fill-ok" x="200" y="32" width="560.9" height="13" rx="2"/>
+<line class="line" x1="732.4" y1="38.5" x2="774.8" y2="38.5"/>
+<line class="line" x1="732.4" y1="33" x2="732.4" y2="44"/>
+<line class="line" x1="774.8" y1="33" x2="774.8" y2="44"/>
+<text x="790" y="43" font-size="12" class="t-b">97 %</text></g>
+<g><title>Magnet — Rappel de la lecture : 82 % (72 %–89 %)</title>
+<rect class="fill-data" x="200" y="50" width="476.8" height="13" rx="2"/>
+<line class="line" x1="618.8" y1="56.5" x2="715.6" y2="56.5"/>
+<line class="line" x1="618.8" y1="51" x2="618.8" y2="62"/>
+<line class="line" x1="715.6" y1="51" x2="715.6" y2="62"/>
+<text x="790" y="61" font-size="12" class="t-b">82 %</text></g>
+<g><title>Magnet — Rappel du rapport principal : 68 % (61 %–78 %)</title>
+<rect class="fill-code" x="200" y="68" width="396.1" height="13" rx="2"/>
+<line class="line" x1="554.4" y1="74.5" x2="651.2" y2="74.5"/>
+<line class="line" x1="554.4" y1="69" x2="554.4" y2="80"/>
+<line class="line" x1="651.2" y1="69" x2="651.2" y2="80"/>
+<text x="790" y="79" font-size="12" class="t-b">68 %</text></g>
+<text x="8" y="136" font-size="13" class="t-b">Hickman</text>
+<text x="8" y="153" font-size="11" class="t-muted">5 exécutions</text>
+<g><title>Hickman — Citations valides (après relance) : 95 % (95 %–96 %)</title>
+<rect class="fill-ok" x="200" y="108" width="552.2" height="13" rx="2"/>
+<line class="line" x1="749.3" y1="114.5" x2="756.8" y2="114.5"/>
+<line class="line" x1="749.3" y1="109" x2="749.3" y2="120"/>
+<line class="line" x1="756.8" y1="109" x2="756.8" y2="120"/>
+<text x="790" y="119" font-size="12" class="t-b">95 %</text></g>
+<g><title>Hickman — Rappel de la lecture : 78 % (75 %–88 %)</title>
+<rect class="fill-data" x="200" y="126" width="449.5" height="13" rx="2"/>
+<line class="line" x1="635.0" y1="132.5" x2="707.5" y2="132.5"/>
+<line class="line" x1="635.0" y1="127" x2="635.0" y2="138"/>
+<line class="line" x1="707.5" y1="127" x2="707.5" y2="138"/>
+<text x="790" y="137" font-size="12" class="t-b">78 %</text></g>
+<g><title>Hickman — Rappel du rapport principal : 68 % (50 %–100 %)</title>
+<rect class="fill-code" x="200" y="144" width="391.5" height="13" rx="2"/>
+<line class="line" x1="490.0" y1="150.5" x2="780.0" y2="150.5"/>
+<line class="line" x1="490.0" y1="145" x2="490.0" y2="156"/>
+<line class="line" x1="780.0" y1="145" x2="780.0" y2="156"/>
+<text x="790" y="155" font-size="12" class="t-b">68 %</text></g>
+<text x="8" y="212" font-size="13" class="t-b">Ambigu</text>
+<text x="8" y="229" font-size="11" class="t-muted">10 exécutions</text>
+<g><title>Ambigu — Citations valides (après relance) : 92 % (72 %–97 %)</title>
+<rect class="fill-ok" x="200" y="184" width="536.5" height="13" rx="2"/>
+<line class="line" x1="616.4" y1="190.5" x2="764.3" y2="190.5"/>
+<line class="line" x1="616.4" y1="185" x2="616.4" y2="196"/>
+<line class="line" x1="764.3" y1="185" x2="764.3" y2="196"/>
+<text x="790" y="195" font-size="12" class="t-b">92 %</text></g>
+<g><title>Ambigu — Rappel de la lecture : 100 % (100 %–100 %)</title>
+<rect class="fill-data" x="200" y="202" width="580.0" height="13" rx="2"/>
+<text x="790" y="213" font-size="12" class="t-b">100 %</text></g>
+<g><title>Ambigu — Rappel du rapport principal : 85 % (83 %–100 %)</title>
+<rect class="fill-code" x="200" y="220" width="493.0" height="13" rx="2"/>
+<line class="line" x1="683.1" y1="226.5" x2="780.0" y2="226.5"/>
+<line class="line" x1="683.1" y1="221" x2="683.1" y2="232"/>
+<line class="line" x1="780.0" y1="221" x2="780.0" y2="232"/>
+<text x="790" y="231" font-size="12" class="t-b">85 %</text></g>
+<text x="8" y="288" font-size="13" class="t-b">Bénin</text>
+<text x="8" y="305" font-size="11" class="t-muted">10 exécutions</text>
+<g><title>Bénin — Citations valides (après relance) : 80 % (51 %–95 %)</title>
+<rect class="fill-ok" x="200" y="260" width="466.3" height="13" rx="2"/>
+<line class="line" x1="497.0" y1="266.5" x2="751.0" y2="266.5"/>
+<line class="line" x1="497.0" y1="261" x2="497.0" y2="272"/>
+<line class="line" x1="751.0" y1="261" x2="751.0" y2="272"/>
+<text x="790" y="271" font-size="12" class="t-b">80 %</text></g>
+<g><title>Bénin — Rappel de la lecture : 100 % (100 %–100 %)</title>
+<rect class="fill-data" x="200" y="278" width="580.0" height="13" rx="2"/>
+<text x="790" y="289" font-size="12" class="t-b">100 %</text></g>
+<g><title>Bénin — Rappel du rapport principal : 90 % (67 %–100 %)</title>
+<rect class="fill-code" x="200" y="296" width="522.0" height="13" rx="2"/>
+<line class="line" x1="586.9" y1="302.5" x2="780.0" y2="302.5"/>
+<line class="line" x1="586.9" y1="297" x2="586.9" y2="308"/>
+<line class="line" x1="780.0" y1="297" x2="780.0" y2="308"/>
+<text x="790" y="307" font-size="12" class="t-b">90 %</text></g>
+</svg>
+        </div>
+        <figcaption><b>Figure 2.</b> Trois mesures sur les quatre cas. La barre donne la moyenne, le trait fin
+        l'étendue entre la plus basse et la plus haute exécution. Survoler une barre affiche sa valeur exacte.</figcaption>
+      </figure>
+      <ul>
+        <li><strong>Citations valides</strong> : part des constats du modèle acceptés par le contrôle automatique.
+        Élevée sur les deux vrais téléphones (≥ 95 %), plus basse et plus dispersée sur les témoins synthétiques.</li>
+        <li><strong>Rappel de la lecture</strong> : les faits connus repérés et prouvés à la lecture des preuves. Complet
+        sur les témoins, qui sont petits ; autour de 80 % sur les vrais téléphones.</li>
+        <li><strong>Rappel du rapport principal</strong> : les faits repris dans le rapport final. L'écart avec la
+        lecture est ce que la rédaction laisse de côté ; ces faits restent dans le fichier de détail.</li>
+      </ul>
+    </section>
+
+    <!-- ========================================================================================== -->
+    <section id="magnet">
+      <h2>Magnet</h2>
+      <p>Les trois scénarios attendus (remise de documents contre rémunération, pression exercée sur l'utilisateur,
+      faux courriel suggéré) sont retrouvés, preuves à l'appui, à chacune des 10 exécutions. Aucun constat n'est émis
+      sans preuve valide.</p>
+      <figure class="diagram">
+        <div class="scroll-x">
+<svg viewBox="0 0 880 284" role="img" aria-labelledby="r3-t">
+<title id="r3-t">Magnet : une mesure par exécution, 10 exécutions</title>
+<line class="grid-line" x1="270" y1="20" x2="270" y2="250"/>
+<text x="270" y="268" text-anchor="middle" font-size="11" class="t-muted">50 %</text>
+<line class="grid-line" x1="372" y1="20" x2="372" y2="250"/>
+<text x="372" y="268" text-anchor="middle" font-size="11" class="t-muted">60 %</text>
+<line class="grid-line" x1="474" y1="20" x2="474" y2="250"/>
+<text x="474" y="268" text-anchor="middle" font-size="11" class="t-muted">70 %</text>
+<line class="grid-line" x1="576" y1="20" x2="576" y2="250"/>
+<text x="576" y="268" text-anchor="middle" font-size="11" class="t-muted">80 %</text>
+<line class="grid-line" x1="678" y1="20" x2="678" y2="250"/>
+<text x="678" y="268" text-anchor="middle" font-size="11" class="t-muted">90 %</text>
+<line class="grid-line" x1="780" y1="20" x2="780" y2="250"/>
+<text x="780" y="268" text-anchor="middle" font-size="11" class="t-muted">100 %</text>
+<circle class="dot-a" cx="276" cy="9" r="5"/><text x="286" y="13" font-size="11.5" class="t-muted">première série</text>
+<circle class="dot-b" cx="396" cy="9" r="5"/><text x="406" y="13" font-size="11.5" class="t-muted">série complémentaire</text>
+<line class="mean-mark" x1="540" y1="2" x2="540" y2="16"/><text x="548" y="13" font-size="11.5" class="t-muted">moyenne</text>
+<text x="8" y="58" font-size="12.5">Citations valides (après relance)</text>
+<circle class="dot-a" cx="752.2" cy="54.0" r="5"><title>20261002T140603Z : 97,3 %</title></circle>
+<circle class="dot-a" cx="752.5" cy="43.0" r="5"><title>20261002T195220Z : 97,3 %</title></circle>
+<circle class="dot-a" cx="749.3" cy="65.0" r="5"><title>20261003T013225Z : 97,0 %</title></circle>
+<circle class="dot-b" cx="752.3" cy="32.0" r="5"><title>20261009T155143Z : 97,3 %</title></circle>
+<circle class="dot-b" cx="770.8" cy="54.0" r="5"><title>20261009T215914Z : 99,1 %</title></circle>
+<circle class="dot-b" cx="752.6" cy="76.0" r="5"><title>20261010T042037Z : 97,3 %</title></circle>
+<circle class="dot-b" cx="735.4" cy="54.0" r="5"><title>20261010T092659Z : 95,6 %</title></circle>
+<circle class="dot-b" cx="752.3" cy="48.5" r="5"><title>20261010T153040Z : 97,3 %</title></circle>
+<circle class="dot-b" cx="751.0" cy="59.5" r="5"><title>20261010T212113Z : 97,2 %</title></circle>
+<circle class="dot-b" cx="696.2" cy="54.0" r="5"><title>20261011T032049Z : 91,8 %</title></circle>
+<line class="mean-mark" x1="746.3" y1="30" x2="746.3" y2="78"/>
+<text x="804" y="58" font-size="12.5" class="t-b">97 %</text>
+<text x="8" y="114" font-size="12.5">Citations valides au premier essai</text>
+<circle class="dot-a" cx="696.2" cy="110.0" r="5"><title>20261002T140603Z : 91,8 %</title></circle>
+<circle class="dot-a" cx="727.2" cy="110.0" r="5"><title>20261002T195220Z : 94,8 %</title></circle>
+<circle class="dot-a" cx="732.6" cy="99.0" r="5"><title>20261003T013225Z : 95,3 %</title></circle>
+<circle class="dot-b" cx="699.1" cy="99.0" r="5"><title>20261009T155143Z : 92,1 %</title></circle>
+<circle class="dot-b" cx="722.6" cy="121.0" r="5"><title>20261009T215914Z : 94,4 %</title></circle>
+<circle class="dot-b" cx="736.1" cy="121.0" r="5"><title>20261010T042037Z : 95,7 %</title></circle>
+<circle class="dot-b" cx="729.2" cy="132.0" r="5"><title>20261010T092659Z : 95,0 %</title></circle>
+<circle class="dot-b" cx="732.7" cy="132.0" r="5"><title>20261010T153040Z : 95,4 %</title></circle>
+<circle class="dot-b" cx="679.6" cy="110.0" r="5"><title>20261010T212113Z : 90,2 %</title></circle>
+<circle class="dot-b" cx="660.8" cy="110.0" r="5"><title>20261011T032049Z : 88,3 %</title></circle>
+<line class="mean-mark" x1="711.7" y1="86" x2="711.7" y2="134"/>
+<text x="804" y="114" font-size="12.5" class="t-b">93 %</text>
+<text x="8" y="170" font-size="12.5">Rappel de la lecture</text>
+<circle class="dot-a" cx="610.0" cy="166.0" r="5"><title>20261002T140603Z : 83,3 %</title></circle>
+<circle class="dot-a" cx="553.3" cy="166.0" r="5"><title>20261002T195220Z : 77,8 %</title></circle>
+<circle class="dot-a" cx="610.0" cy="155.0" r="5"><title>20261003T013225Z : 83,3 %</title></circle>
+<circle class="dot-b" cx="666.7" cy="166.0" r="5"><title>20261009T155143Z : 88,9 %</title></circle>
+<circle class="dot-b" cx="610.0" cy="177.0" r="5"><title>20261009T215914Z : 83,3 %</title></circle>
+<circle class="dot-b" cx="610.0" cy="144.0" r="5"><title>20261010T042037Z : 83,3 %</title></circle>
+<circle class="dot-b" cx="610.0" cy="188.0" r="5"><title>20261010T092659Z : 83,3 %</title></circle>
+<circle class="dot-b" cx="610.0" cy="160.5" r="5"><title>20261010T153040Z : 83,3 %</title></circle>
+<circle class="dot-b" cx="496.7" cy="166.0" r="5"><title>20261010T212113Z : 72,2 %</title></circle>
+<circle class="dot-b" cx="610.0" cy="171.5" r="5"><title>20261011T032049Z : 83,3 %</title></circle>
+<line class="mean-mark" x1="598.4" y1="142" x2="598.4" y2="190"/>
+<text x="804" y="170" font-size="12.5" class="t-b">82 %</text>
+<text x="8" y="226" font-size="12.5">Rappel du rapport principal</text>
+<circle class="dot-a" cx="383.3" cy="222.0" r="5"><title>20261002T140603Z : 61,1 %</title></circle>
+<circle class="dot-a" cx="383.3" cy="211.0" r="5"><title>20261002T195220Z : 61,1 %</title></circle>
+<circle class="dot-a" cx="383.3" cy="233.0" r="5"><title>20261003T013225Z : 61,1 %</title></circle>
+<circle class="dot-b" cx="440.0" cy="222.0" r="5"><title>20261009T155143Z : 66,7 %</title></circle>
+<circle class="dot-b" cx="496.7" cy="222.0" r="5"><title>20261009T215914Z : 72,2 %</title></circle>
+<circle class="dot-b" cx="553.3" cy="222.0" r="5"><title>20261010T042037Z : 77,8 %</title></circle>
+<circle class="dot-b" cx="553.3" cy="211.0" r="5"><title>20261010T092659Z : 77,8 %</title></circle>
+<circle class="dot-b" cx="496.7" cy="211.0" r="5"><title>20261010T153040Z : 72,2 %</title></circle>
+<circle class="dot-b" cx="383.3" cy="200.0" r="5"><title>20261010T212113Z : 61,1 %</title></circle>
+<circle class="dot-b" cx="496.7" cy="233.0" r="5"><title>20261011T032049Z : 72,2 %</title></circle>
+<line class="mean-mark" x1="456.7" y1="198" x2="456.7" y2="246"/>
+<text x="804" y="226" font-size="12.5" class="t-b">68 %</text>
+</svg>
+        </div>
+        <figcaption><b>Figure 3.</b> Magnet, un point par exécution. Points creux : première série ; points pleins :
+        série complémentaire ; trait vertical : moyenne. Le rappel du rapport est la mesure qui varie le plus : 61 %
+        sur la première série, 71 % sur la seconde, avec le même code.</figcaption>
+      </figure>
+      <figure class="diagram">
+        <div class="scroll-x">
+<svg viewBox="0 0 880 150" role="img" aria-labelledby="r4-t">
+<title id="r4-t">Magnet : scénarios examinés et retenus à chaque exécution</title>
+<text x="8" y="40" font-size="12.5" class="t-b">Scénarios examinés</text>
+<text x="8" y="58" font-size="11" class="t-muted">un carré par scénario</text>
+<text x="8" y="128" font-size="12.5" class="t-b">Retenus</text>
+<text x="8" y="144" font-size="11" class="t-muted">exécution n°</text>
+<rect class="b-ok" x="216" y="92" width="16" height="16" rx="3"/>
+<rect class="b-ok" x="216" y="72" width="16" height="16" rx="3"/>
+<rect class="box" x="216" y="52" width="16" height="16" rx="3"/>
+<g><title>Exécution 1 (20261002T140603Z) : 3 examinés, 2 retenus</title>
+<text x="224" y="128" text-anchor="middle" font-size="12" class="t-ok t-b">2</text></g>
+<text x="224" y="144" text-anchor="middle" font-size="10.5" class="t-muted">1</text>
+<rect class="b-ok" x="266" y="92" width="16" height="16" rx="3"/>
+<rect class="b-ok" x="266" y="72" width="16" height="16" rx="3"/>
+<rect class="box" x="266" y="52" width="16" height="16" rx="3"/>
+<g><title>Exécution 2 (20261002T195220Z) : 3 examinés, 2 retenus</title>
+<text x="274" y="128" text-anchor="middle" font-size="12" class="t-ok t-b">2</text></g>
+<text x="274" y="144" text-anchor="middle" font-size="10.5" class="t-muted">2</text>
+<rect class="b-ok" x="314" y="92" width="16" height="16" rx="3"/>
+<rect class="b-ok" x="314" y="72" width="16" height="16" rx="3"/>
+<rect class="b-ok" x="314" y="52" width="16" height="16" rx="3"/>
+<g><title>Exécution 3 (20261003T013225Z) : 3 examinés, 3 retenus</title>
+<text x="322" y="128" text-anchor="middle" font-size="12" class="t-ok t-b">3</text></g>
+<text x="322" y="144" text-anchor="middle" font-size="10.5" class="t-muted">3</text>
+<rect class="b-ok" x="364" y="92" width="16" height="16" rx="3"/>
+<rect class="b-ok" x="364" y="72" width="16" height="16" rx="3"/>
+<rect class="b-ok" x="364" y="52" width="16" height="16" rx="3"/>
+<g><title>Exécution 4 (20261009T155143Z) : 3 examinés, 3 retenus</title>
+<text x="372" y="128" text-anchor="middle" font-size="12" class="t-ok t-b">3</text></g>
+<text x="372" y="144" text-anchor="middle" font-size="10.5" class="t-muted">4</text>
+<rect class="b-ok" x="412" y="92" width="16" height="16" rx="3"/>
+<rect class="b-ok" x="412" y="72" width="16" height="16" rx="3"/>
+<rect class="b-ok" x="412" y="52" width="16" height="16" rx="3"/>
+<rect class="box" x="412" y="32" width="16" height="16" rx="3"/>
+<g><title>Exécution 5 (20261009T215914Z) : 4 examinés, 3 retenus</title>
+<text x="420" y="128" text-anchor="middle" font-size="12" class="t-ok t-b">3</text></g>
+<text x="420" y="144" text-anchor="middle" font-size="10.5" class="t-muted">5</text>
+<rect class="b-ok" x="462" y="92" width="16" height="16" rx="3"/>
+<rect class="b-ok" x="462" y="72" width="16" height="16" rx="3"/>
+<rect class="box" x="462" y="52" width="16" height="16" rx="3"/>
+<rect class="box" x="462" y="32" width="16" height="16" rx="3"/>
+<g><title>Exécution 6 (20261010T042037Z) : 4 examinés, 2 retenus</title>
+<text x="470" y="128" text-anchor="middle" font-size="12" class="t-ok t-b">2</text></g>
+<text x="470" y="144" text-anchor="middle" font-size="10.5" class="t-muted">6</text>
+<rect class="b-ok" x="510" y="92" width="16" height="16" rx="3"/>
+<rect class="b-ok" x="510" y="72" width="16" height="16" rx="3"/>
+<rect class="b-ok" x="510" y="52" width="16" height="16" rx="3"/>
+<rect class="b-ok" x="510" y="32" width="16" height="16" rx="3"/>
+<g><title>Exécution 7 (20261010T092659Z) : 4 examinés, 4 retenus</title>
+<text x="518" y="128" text-anchor="middle" font-size="12" class="t-ok t-b">4</text></g>
+<text x="518" y="144" text-anchor="middle" font-size="10.5" class="t-muted">7</text>
+<rect class="b-ok" x="560" y="92" width="16" height="16" rx="3"/>
+<rect class="b-ok" x="560" y="72" width="16" height="16" rx="3"/>
+<rect class="b-ok" x="560" y="52" width="16" height="16" rx="3"/>
+<g><title>Exécution 8 (20261010T153040Z) : 3 examinés, 3 retenus</title>
+<text x="568" y="128" text-anchor="middle" font-size="12" class="t-ok t-b">3</text></g>
+<text x="568" y="144" text-anchor="middle" font-size="10.5" class="t-muted">8</text>
+<rect class="b-ok" x="608" y="92" width="16" height="16" rx="3"/>
+<rect class="b-ok" x="608" y="72" width="16" height="16" rx="3"/>
+<rect class="box" x="608" y="52" width="16" height="16" rx="3"/>
+<rect class="box" x="608" y="32" width="16" height="16" rx="3"/>
+<g><title>Exécution 9 (20261010T212113Z) : 4 examinés, 2 retenus</title>
+<text x="616" y="128" text-anchor="middle" font-size="12" class="t-ok t-b">2</text></g>
+<text x="616" y="144" text-anchor="middle" font-size="10.5" class="t-muted">9</text>
+<rect class="b-ok" x="658" y="92" width="16" height="16" rx="3"/>
+<rect class="b-ok" x="658" y="72" width="16" height="16" rx="3"/>
+<rect class="b-ok" x="658" y="52" width="16" height="16" rx="3"/>
+<rect class="box" x="658" y="32" width="16" height="16" rx="3"/>
+<g><title>Exécution 10 (20261011T032049Z) : 4 examinés, 3 retenus</title>
+<text x="666" y="128" text-anchor="middle" font-size="12" class="t-ok t-b">3</text></g>
+<text x="666" y="144" text-anchor="middle" font-size="10.5" class="t-muted">10</text>
+<rect class="b-ok" x="710" y="40" width="14" height="14" rx="3"/><text x="730" y="52" font-size="11.5">retenu (étayé ou fragile)</text>
+<rect class="box" x="710" y="64" width="14" height="14" rx="3"/><text x="730" y="76" font-size="11.5">examiné, non retenu</text>
+<text x="710" y="104" font-size="11.5" class="t-ok t-b">3 attendus, tous retrouvés</text>
+</svg>
+        </div>
+        <figcaption><b>Figure 4.</b> Magnet, scénarios par exécution. Le modèle formule 3 ou 4 scénarios et en retient
+        2 à 4. Un même scénario retenu peut couvrir plusieurs scénarios attendus : les trois sont retrouvés même quand
+        seuls deux sont retenus.</figcaption>
+      </figure>
+      <h3>Les 18 faits de la vérité terrain, dans le rapport principal</h3>
+      <div class="legend">
+        <span><span class="meter"><i style="width:100%"></i></span>à chaque exécution</span>
+        <span><span class="meter mid"><i style="width:60%"></i></span>une sur deux ou plus</span>
+        <span><span class="meter low"><i style="width:30%"></i></span>moins d'une sur deux</span>
+        <span><span class="tag warn">hors d'atteinte</span> absent des preuves transmises</span>
+      </div>
+      <div class="table-wrap">
+      <table class="small">
+        <thead><tr><th>Fait</th><th>Catégorie</th><th>Description résumée</th><th>Exécutions où il figure</th></tr></thead>
+        <tbody>
+<tr><td><code>GT-01</code></td><td>Identification</td><td>Numéro de série, modèle, version d'iOS</td><td><span class="meter "><i style="width:100%"></i></span>10 / 10</td></tr>
+<tr><td><code>GT-02</code></td><td>Identification</td><td>Numéro de ligne, IMSI, ICCID</td><td><span class="meter "><i style="width:100%"></i></span>10 / 10</td></tr>
+<tr><td><code>GT-03</code></td><td>Identification</td><td>Compte Apple ID personnel</td><td><span class="meter "><i style="width:100%"></i></span>10 / 10</td></tr>
+<tr><td><code>GT-04</code></td><td>Identification</td><td>Nom de l'appareil</td><td><span class="meter "><i style="width:100%"></i></span>10 / 10</td></tr>
+<tr><td><code>GT-05</code></td><td>Écosystème</td><td>Appareils Bluetooth appairés</td><td><span class="meter "><i style="width:100%"></i></span>10 / 10</td></tr>
+<tr><td><code>GT-06</code></td><td>Applications</td><td>Messageries chiffrées installées</td><td><span class="meter "><i style="width:100%"></i></span>10 / 10</td></tr>
+<tr><td><code>GT-07</code></td><td>Mode de vie</td><td>Domicile principal</td><td><span class="meter low"><i style="width:0%"></i></span>0 / 10</td></tr>
+<tr><td><code>GT-08</code></td><td>Mode de vie</td><td>Localisation secondaire après l'incident</td><td><span class="tag warn">hors d'atteinte</span></td></tr>
+<tr><td><code>GT-09</code></td><td>Mode de vie</td><td>Rythme de déverrouillage nocturne</td><td><span class="tag warn">hors d'atteinte</span></td></tr>
+<tr><td><code>GT-10</code></td><td>Relations</td><td>Supérieur hiérarchique (contact, employeur)</td><td><span class="meter "><i style="width:100%"></i></span>10 / 10</td></tr>
+<tr><td><code>GT-11</code></td><td>Chronologie</td><td>SMS d'enregistrement Signal</td><td><span class="meter low"><i style="width:0%"></i></span>0 / 10</td></tr>
+<tr><td><code>GT-12</code></td><td>Chronologie</td><td>Premier contact sur Signal</td><td><span class="meter mid"><i style="width:50%"></i></span>5 / 10</td></tr>
+<tr><td><code>GT-13</code></td><td>Chronologie</td><td>Bascule demandée vers Zangi</td><td><span class="meter "><i style="width:100%"></i></span>10 / 10</td></tr>
+<tr><td><code>GT-14</code></td><td>Chronologie</td><td>Offre de 10 000 $ pour des rapports, puis menaces</td><td><span class="meter "><i style="width:100%"></i></span>10 / 10</td></tr>
+<tr><td><code>GT-15</code></td><td>Chronologie</td><td>Fichier Astronautica_Sanitized.pdf</td><td><span class="meter "><i style="width:100%"></i></span>10 / 10</td></tr>
+<tr><td><code>GT-16</code></td><td>Chronologie</td><td>Faux courriel usurpant un responsable</td><td><span class="meter mid"><i style="width:60%"></i></span>6 / 10</td></tr>
+<tr><td><code>GT-17</code></td><td>Chronologie</td><td>Script envoyé (« Use this »)</td><td><span class="meter mid"><i style="width:90%"></i></span>9 / 10</td></tr>
+<tr><td><code>GT-18</code></td><td>Chronologie</td><td>Confirmation d'exécution par l'utilisateur</td><td><span class="meter low"><i style="width:30%"></i></span>3 / 10</td></tr>
+        </tbody>
+      </table>
+      </div>
+      <ul>
+        <li><strong>Toujours présents</strong> : l'identification du téléphone, son écosystème, les messageries
+        chiffrées, le supérieur hiérarchique et le cœur de l'incident (bascule vers Zangi, offre d'argent, fichier
+        exfiltré).</li>
+        <li><strong>Instables</strong> : le premier contact sur Signal (5 / 10), le faux courriel (6 / 10), la
+        confirmation d'exécution (3 / 10). La lecture retrouve davantage de faits que la rédaction n'en reprend.</li>
+        <li><strong>Jamais repris</strong> : le domicile principal et le SMS d'enregistrement Signal.</li>
+        <li><strong>Hors d'atteinte</strong> : la localisation secondaire et le rythme de déverrouillage ne figurent
+        dans aucune preuve transmise au modèle. C'est une limite de l'extraction, pas du raisonnement : le plafond de
+        rappel est de 89 %.</li>
+      </ul>
+      <p class="small muted">Qualifications envisagées sur l'ensemble des exécutions : CP143, CP143bis, CP146, CP156,
+      CP162, CP180, CP181, CP251, CP273. Elles restent des pistes soumises au magistrat.</p>
+    </section>
+
+    <!-- ========================================================================================== -->
+    <section id="hickman">
+      <h2>Hickman, cas tenu à l'écart</h2>
+      <p>C'est le cas le plus honnête de la campagne : un vrai téléphone, public, que personne n'a regardé pour régler
+      le harness. Il n'y a <strong>aucune infraction</strong> à y trouver, mais beaucoup de matière : une quinzaine
+      d'applications de confidentialité, des SMS d'hameçonnage reçus, une plaisanterie sur un « malware ». Il est
+      aussi bien plus gros que Magnet : environ 2 240 constats vérifiés par exécution, contre 330.</p>
+      <figure class="diagram">
+        <div class="scroll-x">
+<svg viewBox="0 0 880 284" role="img" aria-labelledby="r5-t">
+<title id="r5-t">Hickman : une mesure par exécution, 5 exécutions</title>
+<line class="grid-line" x1="270" y1="20" x2="270" y2="250"/>
+<text x="270" y="268" text-anchor="middle" font-size="11" class="t-muted">50 %</text>
+<line class="grid-line" x1="372" y1="20" x2="372" y2="250"/>
+<text x="372" y="268" text-anchor="middle" font-size="11" class="t-muted">60 %</text>
+<line class="grid-line" x1="474" y1="20" x2="474" y2="250"/>
+<text x="474" y="268" text-anchor="middle" font-size="11" class="t-muted">70 %</text>
+<line class="grid-line" x1="576" y1="20" x2="576" y2="250"/>
+<text x="576" y="268" text-anchor="middle" font-size="11" class="t-muted">80 %</text>
+<line class="grid-line" x1="678" y1="20" x2="678" y2="250"/>
+<text x="678" y="268" text-anchor="middle" font-size="11" class="t-muted">90 %</text>
+<line class="grid-line" x1="780" y1="20" x2="780" y2="250"/>
+<text x="780" y="268" text-anchor="middle" font-size="11" class="t-muted">100 %</text>
+<circle class="dot-a" cx="276" cy="9" r="5"/><text x="286" y="13" font-size="11.5" class="t-muted">première série</text>
+<circle class="dot-b" cx="396" cy="9" r="5"/><text x="406" y="13" font-size="11.5" class="t-muted">série complémentaire</text>
+<line class="mean-mark" x1="540" y1="2" x2="540" y2="16"/><text x="548" y="13" font-size="11.5" class="t-muted">moyenne</text>
+<text x="8" y="58" font-size="12.5">Citations valides (après relance)</text>
+<circle class="dot-a" cx="737.1" cy="54.0" r="5"><title>20261005T122845Z : 95,8 %</title></circle>
+<circle class="dot-a" cx="725.8" cy="54.0" r="5"><title>20261006T175407Z : 94,7 %</title></circle>
+<circle class="dot-a" cx="738.9" cy="43.0" r="5"><title>20261007T234028Z : 96,0 %</title></circle>
+<circle class="dot-b" cx="727.7" cy="65.0" r="5"><title>20261011T093102Z : 94,9 %</title></circle>
+<circle class="dot-b" cx="727.5" cy="32.0" r="5"><title>20261012T145124Z : 94,9 %</title></circle>
+<line class="mean-mark" x1="731.0" y1="30" x2="731.0" y2="78"/>
+<text x="804" y="58" font-size="12.5" class="t-b">95 %</text>
+<text x="8" y="114" font-size="12.5">Citations valides au premier essai</text>
+<circle class="dot-a" cx="687.4" cy="110.0" r="5"><title>20261005T122845Z : 90,9 %</title></circle>
+<circle class="dot-a" cx="682.5" cy="99.0" r="5"><title>20261006T175407Z : 90,4 %</title></circle>
+<circle class="dot-a" cx="678.7" cy="121.0" r="5"><title>20261007T234028Z : 90,1 %</title></circle>
+<circle class="dot-b" cx="688.2" cy="88.0" r="5"><title>20261011T093102Z : 91,0 %</title></circle>
+<circle class="dot-b" cx="689.0" cy="88.0" r="5"><title>20261012T145124Z : 91,1 %</title></circle>
+<line class="mean-mark" x1="685.1" y1="86" x2="685.1" y2="134"/>
+<text x="804" y="114" font-size="12.5" class="t-b">91 %</text>
+<text x="8" y="170" font-size="12.5">Rappel de la lecture</text>
+<circle class="dot-a" cx="652.5" cy="166.0" r="5"><title>20261005T122845Z : 87,5 %</title></circle>
+<circle class="dot-a" cx="525.0" cy="166.0" r="5"><title>20261006T175407Z : 75,0 %</title></circle>
+<circle class="dot-a" cx="525.0" cy="155.0" r="5"><title>20261007T234028Z : 75,0 %</title></circle>
+<circle class="dot-b" cx="525.0" cy="177.0" r="5"><title>20261011T093102Z : 75,0 %</title></circle>
+<circle class="dot-b" cx="525.0" cy="144.0" r="5"><title>20261012T145124Z : 75,0 %</title></circle>
+<line class="mean-mark" x1="550.5" y1="142" x2="550.5" y2="190"/>
+<text x="804" y="170" font-size="12.5" class="t-b">78 %</text>
+<text x="8" y="226" font-size="12.5">Rappel du rapport principal</text>
+<circle class="dot-a" cx="397.5" cy="222.0" r="5"><title>20261005T122845Z : 62,5 %</title></circle>
+<circle class="dot-a" cx="397.5" cy="211.0" r="5"><title>20261006T175407Z : 62,5 %</title></circle>
+<circle class="dot-a" cx="780.0" cy="222.0" r="5"><title>20261007T234028Z : 100,0 %</title></circle>
+<circle class="dot-b" cx="397.5" cy="233.0" r="5"><title>20261011T093102Z : 62,5 %</title></circle>
+<circle class="dot-b" cx="270.0" cy="222.0" r="5"><title>20261012T145124Z : 50,0 %</title></circle>
+<line class="mean-mark" x1="448.5" y1="198" x2="448.5" y2="246"/>
+<text x="804" y="226" font-size="12.5" class="t-b">68 %</text>
+</svg>
+        </div>
+        <figcaption><b>Figure 5.</b> Hickman, un point par exécution. Les citations tiennent (95 %), au niveau de
+        Magnet, sur un cas jamais vu. Le rappel du rapport varie fortement d'une exécution à l'autre (de 50 % à 100 %) :
+        sur 8 faits seulement, un fait de plus ou de moins pèse 12,5 points.</figcaption>
+      </figure>
+      <h3>Les 8 faits de la vérité terrain, dans le rapport principal</h3>
+      <div class="table-wrap">
+      <table class="small">
+        <thead><tr><th>Fait</th><th>Catégorie</th><th>Description résumée</th><th>Exécutions où il figure</th></tr></thead>
+        <tbody>
+<tr><td><code>HK-01</code></td><td>Identification</td><td>Numéro de ligne (opérateur Google Fi)</td><td><span class="meter "><i style="width:100%"></i></span>5 / 5</td></tr>
+<tr><td><code>HK-02</code></td><td>Identification</td><td>Numéro de série</td><td><span class="meter mid"><i style="width:80%"></i></span>4 / 5</td></tr>
+<tr><td><code>HK-03</code></td><td>Identification</td><td>Compte Apple</td><td><span class="meter "><i style="width:100%"></i></span>5 / 5</td></tr>
+<tr><td><code>HK-04</code></td><td>Identification</td><td>Version d'iOS et build</td><td><span class="meter "><i style="width:100%"></i></span>5 / 5</td></tr>
+<tr><td><code>HK-05</code></td><td>Communications</td><td>Message Signal reçu annonçant l'arrivée du contact sur Signal</td><td><span class="meter low"><i style="width:20%"></i></span>1 / 5</td></tr>
+<tr><td><code>HK-06</code></td><td>Communications</td><td>Question sur Signal à propos d'un HomePod</td><td><span class="meter low"><i style="width:20%"></i></span>1 / 5</td></tr>
+<tr><td><code>HK-07</code></td><td>Applications</td><td>Messageries de confidentialité installées (Threema, Wickr, Session…)</td><td><span class="meter "><i style="width:100%"></i></span>5 / 5</td></tr>
+<tr><td><code>HK-08</code></td><td>Communications</td><td>Plaisanterie sur Telegram à propos d'un « malware » (à rapporter sans en faire un scénario)</td><td><span class="meter low"><i style="width:20%"></i></span>1 / 5</td></tr>
+        </tbody>
+      </table>
+      </div>
+      <p>L'identification du téléphone et les messageries installées sont toujours là. Les trois échanges datés du
+      même jour (deux sur Signal, un sur Telegram) ne sont repris que dans une exécution sur cinq : noyés dans un gros
+      volume de messages, ils sont rarement retenus pour le rapport.</p>
+
+      <h3>Des scénarios retenus sur un téléphone sans infraction</h3>
+      <figure class="diagram">
+        <div class="scroll-x">
+<svg viewBox="0 0 880 150" role="img" aria-labelledby="r6-t">
+<title id="r6-t">Hickman : scénarios examinés et retenus à chaque exécution ; 0 attendu</title>
+<text x="8" y="40" font-size="12.5" class="t-b">Scénarios examinés</text>
+<text x="8" y="58" font-size="11" class="t-muted">un carré par scénario</text>
+<text x="8" y="128" font-size="12.5" class="t-b">Retenus</text>
+<text x="8" y="144" font-size="11" class="t-muted">exécution n°</text>
+<rect class="b-ko" x="231" y="92" width="16" height="16" rx="3"/>
+<rect class="b-ko" x="231" y="72" width="16" height="16" rx="3"/>
+<rect class="box" x="231" y="52" width="16" height="16" rx="3"/>
+<g><title>Exécution 1 (20261005T122845Z) : 3 examinés, 2 retenus</title>
+<text x="239" y="128" text-anchor="middle" font-size="12" class="t-ko t-b">2</text></g>
+<text x="239" y="144" text-anchor="middle" font-size="10.5" class="t-muted">1</text>
+<rect class="box" x="309" y="92" width="16" height="16" rx="3"/>
+<rect class="box" x="309" y="72" width="16" height="16" rx="3"/>
+<rect class="box" x="309" y="52" width="16" height="16" rx="3"/>
+<rect class="box" x="309" y="32" width="16" height="16" rx="3"/>
+<g><title>Exécution 2 (20261006T175407Z) : 4 examinés, 0 retenus</title>
+<text x="317" y="128" text-anchor="middle" font-size="12" class="t-muted">0</text></g>
+<text x="317" y="144" text-anchor="middle" font-size="10.5" class="t-muted">2</text>
+<rect class="b-ko" x="387" y="92" width="16" height="16" rx="3"/>
+<rect class="box" x="387" y="72" width="16" height="16" rx="3"/>
+<rect class="box" x="387" y="52" width="16" height="16" rx="3"/>
+<g><title>Exécution 3 (20261007T234028Z) : 3 examinés, 1 retenus</title>
+<text x="395" y="128" text-anchor="middle" font-size="12" class="t-ko t-b">1</text></g>
+<text x="395" y="144" text-anchor="middle" font-size="10.5" class="t-muted">3</text>
+<rect class="box" x="465" y="92" width="16" height="16" rx="3"/>
+<rect class="box" x="465" y="72" width="16" height="16" rx="3"/>
+<rect class="box" x="465" y="52" width="16" height="16" rx="3"/>
+<rect class="box" x="465" y="32" width="16" height="16" rx="3"/>
+<g><title>Exécution 4 (20261011T093102Z) : 4 examinés, 0 retenus</title>
+<text x="473" y="128" text-anchor="middle" font-size="12" class="t-muted">0</text></g>
+<text x="473" y="144" text-anchor="middle" font-size="10.5" class="t-muted">4</text>
+<rect class="b-ko" x="543" y="92" width="16" height="16" rx="3"/>
+<rect class="box" x="543" y="72" width="16" height="16" rx="3"/>
+<rect class="box" x="543" y="52" width="16" height="16" rx="3"/>
+<rect class="box" x="543" y="32" width="16" height="16" rx="3"/>
+<g><title>Exécution 5 (20261012T145124Z) : 4 examinés, 1 retenus</title>
+<text x="551" y="128" text-anchor="middle" font-size="12" class="t-ko t-b">1</text></g>
+<text x="551" y="144" text-anchor="middle" font-size="10.5" class="t-muted">5</text>
+<rect class="b-ko" x="610" y="40" width="14" height="14" rx="3"/><text x="630" y="52" font-size="11.5">retenu (étayé ou fragile)</text>
+<rect class="box" x="610" y="64" width="14" height="14" rx="3"/><text x="630" y="76" font-size="11.5">examiné, non retenu</text>
+<text x="610" y="104" font-size="11.5" class="t-ok t-b">attendu : 0 retenu</text>
+</svg>
+        </div>
+        <figcaption><b>Figure 6.</b> Hickman, scénarios par exécution. Le modèle examine 3 ou 4 scénarios à chaque
+        fois, ce qui est attendu sur un téléphone riche ; mais il en retient au moins un dans 3 exécutions sur 5.</figcaption>
+      </figure>
+      <div class="callout limit">
+        <span class="callout-title">Ce que cela veut dire pour l'analyste</span>
+        Sur un téléphone ordinaire mais chargé (applications de confidentialité, hameçonnage reçu, plaisanteries), le
+        harness peut retenir un scénario. Les preuves citées existent et sont exactes ;
+        c'est leur <em>lecture</em> qui est trop soupçonneuse. Un scénario retenu reste une piste à vérifier, jamais
+        une conclusion, et l'analyste qui relit le brouillon doit juger s'il tient.
+      </div>
+      <ul>
+        <li><strong>Accusations inventées</strong> : une exécution sur cinq contient deux phrases qui parlent de
+        chantage, à partir d'un SMS ambigu et de SMS d'hameçonnage (faux colis). La première écarte en fait cette
+        hypothèse (« plutôt que par une menace criminelle »), mais la détection par mots-clés ne voit pas toujours la
+        négation : la mesure est volontairement sévère.</li>
+        <li><strong>Qualification</strong> : CP143bis (accès indu à un système informatique) est envisagé dans une
+        exécution sur cinq.</li>
+        <li><strong>Réponses illisibles</strong> : 1 par exécution en moyenne (0 à 3), sur environ 335 appels au
+        modèle. Elles sont comptées, et aucun texte non vérifié n'atteint le rapport.</li>
+      </ul>
+    </section>
+
+    <!-- ========================================================================================== -->
+    <section id="temoins">
+      <h2>Cas témoins</h2>
+      <p>Sur un témoin, le bon résultat est de ne rien retenir. Depuis le 5 octobre, l'évaluation applique aux deux
+      témoins un <strong>seuil bloquant</strong> : 0 scénario retenu et 0 accusation inventée, sur chaque exécution.</p>
+      <div class="table-wrap">
+      <table>
+        <thead><tr><th>Mesure (10 exécutions)</th><th class="num">Ambigu</th><th class="num">Bénin</th><th class="num">Attendu</th></tr></thead>
+        <tbody>
+          <tr><td>Scénarios retenus par exécution</td><td class="num"><span class="tag ko">0,2 (0–1)</span></td><td class="num"><span class="tag ok">0 (0–0)</span></td><td class="num">0</td></tr>
+          <tr><td>Accusations inventées par exécution</td><td class="num"><span class="tag ok">0</span></td><td class="num"><span class="tag ok">0</span></td><td class="num">0</td></tr>
+          <tr><td>Seuil des témoins</td><td class="num"><span class="tag ko">non tenu</span></td><td class="num"><span class="tag ok">tenu</span></td><td class="num">tenu</td></tr>
+          <tr><td>Scénarios examinés par exécution</td><td class="num">2 (2–2)</td><td class="num">0 (0–0)</td><td class="num">—</td></tr>
+          <tr><td>Rappel de la lecture</td><td class="num">100 %</td><td class="num">100 %</td><td class="num">—</td></tr>
+          <tr><td>Rappel du rapport principal</td><td class="num">85 % (83–100)</td><td class="num">90 % (67–100)</td><td class="num">—</td></tr>
+          <tr><td>Citations valides, après relance</td><td class="num">92 % (72–97)</td><td class="num"><span class="tag warn">80 % (51–95)</span></td><td class="num">élevé</td></tr>
+          <tr><td>Citations valides, au premier essai</td><td class="num">77 % (68–99)</td><td class="num">64 % (43–85)</td><td class="num">—</td></tr>
+        </tbody>
+      </table>
+      </div>
+      <figure class="diagram">
+        <div class="scroll-x">
+<svg viewBox="0 0 880 150" role="img" aria-labelledby="r7-t">
+<title id="r7-t">Témoin ambigu : scénarios examinés et retenus à chaque exécution ; 0 attendu</title>
+<text x="8" y="40" font-size="12.5" class="t-b">Scénarios examinés</text>
+<text x="8" y="58" font-size="11" class="t-muted">un carré par scénario</text>
+<text x="8" y="128" font-size="12.5" class="t-b">Retenus</text>
+<text x="8" y="144" font-size="11" class="t-muted">exécution n°</text>
+<rect class="box" x="216" y="92" width="16" height="16" rx="3"/>
+<rect class="box" x="216" y="72" width="16" height="16" rx="3"/>
+<g><title>Exécution 1 (20261003T070018Z) : 2 examinés, 0 retenus</title>
+<text x="224" y="128" text-anchor="middle" font-size="12" class="t-muted">0</text></g>
+<text x="224" y="144" text-anchor="middle" font-size="10.5" class="t-muted">1</text>
+<rect class="b-ko" x="266" y="92" width="16" height="16" rx="3"/>
+<rect class="box" x="266" y="72" width="16" height="16" rx="3"/>
+<g><title>Exécution 2 (20261003T080555Z) : 2 examinés, 1 retenus</title>
+<text x="274" y="128" text-anchor="middle" font-size="12" class="t-ko t-b">1</text></g>
+<text x="274" y="144" text-anchor="middle" font-size="10.5" class="t-muted">2</text>
+<rect class="box" x="314" y="92" width="16" height="16" rx="3"/>
+<rect class="box" x="314" y="72" width="16" height="16" rx="3"/>
+<g><title>Exécution 3 (20261003T091921Z) : 2 examinés, 0 retenus</title>
+<text x="322" y="128" text-anchor="middle" font-size="12" class="t-muted">0</text></g>
+<text x="322" y="144" text-anchor="middle" font-size="10.5" class="t-muted">3</text>
+<rect class="b-ko" x="364" y="92" width="16" height="16" rx="3"/>
+<rect class="box" x="364" y="72" width="16" height="16" rx="3"/>
+<g><title>Exécution 4 (20261009T061536Z) : 2 examinés, 1 retenus</title>
+<text x="372" y="128" text-anchor="middle" font-size="12" class="t-ko t-b">1</text></g>
+<text x="372" y="144" text-anchor="middle" font-size="10.5" class="t-muted">4</text>
+<rect class="box" x="412" y="92" width="16" height="16" rx="3"/>
+<rect class="box" x="412" y="72" width="16" height="16" rx="3"/>
+<g><title>Exécution 5 (20261009T073132Z) : 2 examinés, 0 retenus</title>
+<text x="420" y="128" text-anchor="middle" font-size="12" class="t-muted">0</text></g>
+<text x="420" y="144" text-anchor="middle" font-size="10.5" class="t-muted">5</text>
+<rect class="box" x="462" y="92" width="16" height="16" rx="3"/>
+<rect class="box" x="462" y="72" width="16" height="16" rx="3"/>
+<g><title>Exécution 6 (20261009T082309Z) : 2 examinés, 0 retenus</title>
+<text x="470" y="128" text-anchor="middle" font-size="12" class="t-muted">0</text></g>
+<text x="470" y="144" text-anchor="middle" font-size="10.5" class="t-muted">6</text>
+<rect class="box" x="510" y="92" width="16" height="16" rx="3"/>
+<rect class="box" x="510" y="72" width="16" height="16" rx="3"/>
+<g><title>Exécution 7 (20261009T091048Z) : 2 examinés, 0 retenus</title>
+<text x="518" y="128" text-anchor="middle" font-size="12" class="t-muted">0</text></g>
+<text x="518" y="144" text-anchor="middle" font-size="10.5" class="t-muted">7</text>
+<rect class="box" x="560" y="92" width="16" height="16" rx="3"/>
+<rect class="box" x="560" y="72" width="16" height="16" rx="3"/>
+<g><title>Exécution 8 (20261009T095550Z) : 2 examinés, 0 retenus</title>
+<text x="568" y="128" text-anchor="middle" font-size="12" class="t-muted">0</text></g>
+<text x="568" y="144" text-anchor="middle" font-size="10.5" class="t-muted">8</text>
+<rect class="box" x="608" y="92" width="16" height="16" rx="3"/>
+<rect class="box" x="608" y="72" width="16" height="16" rx="3"/>
+<g><title>Exécution 9 (20261009T105320Z) : 2 examinés, 0 retenus</title>
+<text x="616" y="128" text-anchor="middle" font-size="12" class="t-muted">0</text></g>
+<text x="616" y="144" text-anchor="middle" font-size="10.5" class="t-muted">9</text>
+<rect class="box" x="658" y="92" width="16" height="16" rx="3"/>
+<rect class="box" x="658" y="72" width="16" height="16" rx="3"/>
+<g><title>Exécution 10 (20261009T114400Z) : 2 examinés, 0 retenus</title>
+<text x="666" y="128" text-anchor="middle" font-size="12" class="t-muted">0</text></g>
+<text x="666" y="144" text-anchor="middle" font-size="10.5" class="t-muted">10</text>
+<rect class="b-ko" x="710" y="40" width="14" height="14" rx="3"/><text x="730" y="52" font-size="11.5">retenu (étayé ou fragile)</text>
+<rect class="box" x="710" y="64" width="14" height="14" rx="3"/><text x="730" y="76" font-size="11.5">examiné, non retenu</text>
+<text x="710" y="104" font-size="11.5" class="t-ok t-b">attendu : 0 retenu</text>
+</svg>
+        </div>
+        <figcaption><b>Figure 7.</b> Témoin ambigu, scénarios par exécution. Examiner deux scénarios est normal : le cas
+        est construit pour en suggérer. Deux exécutions sur dix en retiennent un, une dans
+        chaque série.</figcaption>
+      </figure>
+      <figure class="diagram">
+        <div class="scroll-x">
+<svg viewBox="0 0 880 284" role="img" aria-labelledby="r8-t">
+<title id="r8-t">Cas témoins : citations valides par exécution</title>
+<line class="grid-line" x1="270" y1="20" x2="270" y2="250"/>
+<text x="270" y="268" text-anchor="middle" font-size="11" class="t-muted">40 %</text>
+<line class="grid-line" x1="355" y1="20" x2="355" y2="250"/>
+<text x="355" y="268" text-anchor="middle" font-size="11" class="t-muted">50 %</text>
+<line class="grid-line" x1="440" y1="20" x2="440" y2="250"/>
+<text x="440" y="268" text-anchor="middle" font-size="11" class="t-muted">60 %</text>
+<line class="grid-line" x1="525" y1="20" x2="525" y2="250"/>
+<text x="525" y="268" text-anchor="middle" font-size="11" class="t-muted">70 %</text>
+<line class="grid-line" x1="610" y1="20" x2="610" y2="250"/>
+<text x="610" y="268" text-anchor="middle" font-size="11" class="t-muted">80 %</text>
+<line class="grid-line" x1="695" y1="20" x2="695" y2="250"/>
+<text x="695" y="268" text-anchor="middle" font-size="11" class="t-muted">90 %</text>
+<line class="grid-line" x1="780" y1="20" x2="780" y2="250"/>
+<text x="780" y="268" text-anchor="middle" font-size="11" class="t-muted">100 %</text>
+<circle class="dot-a" cx="276" cy="9" r="5"/><text x="286" y="13" font-size="11.5" class="t-muted">première série</text>
+<circle class="dot-b" cx="396" cy="9" r="5"/><text x="406" y="13" font-size="11.5" class="t-muted">série complémentaire</text>
+<line class="mean-mark" x1="540" y1="2" x2="540" y2="16"/><text x="548" y="13" font-size="11.5" class="t-muted">moyenne</text>
+<text x="8" y="58" font-size="12.5">Ambigu · après relance</text>
+<circle class="dot-a" cx="715.8" cy="54.0" r="5"><title>20261003T070018Z : 92,5 %</title></circle>
+<circle class="dot-a" cx="713.8" cy="43.0" r="5"><title>20261003T080555Z : 92,2 %</title></circle>
+<circle class="dot-a" cx="540.6" cy="54.0" r="5"><title>20261003T091921Z : 71,8 %</title></circle>
+<circle class="dot-b" cx="757.3" cy="54.0" r="5"><title>20261009T061536Z : 97,3 %</title></circle>
+<circle class="dot-b" cx="733.6" cy="54.0" r="5"><title>20261009T073132Z : 94,5 %</title></circle>
+<circle class="dot-b" cx="750.7" cy="43.0" r="5"><title>20261009T082309Z : 96,6 %</title></circle>
+<circle class="dot-b" cx="748.5" cy="65.0" r="5"><title>20261009T091048Z : 96,3 %</title></circle>
+<circle class="dot-b" cx="715.8" cy="65.0" r="5"><title>20261009T095550Z : 92,5 %</title></circle>
+<circle class="dot-b" cx="751.7" cy="32.0" r="5"><title>20261009T105320Z : 96,7 %</title></circle>
+<circle class="dot-b" cx="736.8" cy="43.0" r="5"><title>20261009T114400Z : 94,9 %</title></circle>
+<line class="mean-mark" x1="716.2" y1="30" x2="716.2" y2="78"/>
+<text x="804" y="58" font-size="12.5" class="t-b">92 %</text>
+<text x="8" y="114" font-size="12.5">Ambigu · premier essai</text>
+<circle class="dot-a" cx="510.8" cy="110.0" r="5"><title>20261003T070018Z : 68,3 %</title></circle>
+<circle class="dot-a" cx="767.7" cy="110.0" r="5"><title>20261003T080555Z : 98,6 %</title></circle>
+<circle class="dot-a" cx="726.9" cy="110.0" r="5"><title>20261003T091921Z : 93,8 %</title></circle>
+<circle class="dot-b" cx="670.7" cy="110.0" r="5"><title>20261009T061536Z : 87,1 %</title></circle>
+<circle class="dot-b" cx="539.2" cy="110.0" r="5"><title>20261009T073132Z : 71,7 %</title></circle>
+<circle class="dot-b" cx="518.5" cy="99.0" r="5"><title>20261009T082309Z : 69,2 %</title></circle>
+<circle class="dot-b" cx="553.3" cy="110.0" r="5"><title>20261009T091048Z : 73,3 %</title></circle>
+<circle class="dot-b" cx="515.2" cy="121.0" r="5"><title>20261009T095550Z : 68,9 %</title></circle>
+<circle class="dot-b" cx="505.4" cy="121.0" r="5"><title>20261009T105320Z : 67,7 %</title></circle>
+<circle class="dot-b" cx="509.5" cy="132.0" r="5"><title>20261009T114400Z : 68,2 %</title></circle>
+<line class="mean-mark" x1="582.0" y1="86" x2="582.0" y2="134"/>
+<text x="804" y="114" font-size="12.5" class="t-b">77 %</text>
+<text x="8" y="170" font-size="12.5">Bénin · après relance</text>
+<circle class="dot-a" cx="365.4" cy="166.0" r="5"><title>20261003T101648Z : 51,2 %</title></circle>
+<circle class="dot-a" cx="365.4" cy="155.0" r="5"><title>20261003T104704Z : 51,2 %</title></circle>
+<circle class="dot-a" cx="365.4" cy="177.0" r="5"><title>20261003T111657Z : 51,2 %</title></circle>
+<circle class="dot-b" cx="737.5" cy="166.0" r="5"><title>20261009T123313Z : 95,0 %</title></circle>
+<circle class="dot-b" cx="695.0" cy="166.0" r="5"><title>20261009T130341Z : 90,0 %</title></circle>
+<circle class="dot-b" cx="737.5" cy="155.0" r="5"><title>20261009T132934Z : 95,0 %</title></circle>
+<circle class="dot-b" cx="695.0" cy="155.0" r="5"><title>20261009T135942Z : 90,0 %</title></circle>
+<circle class="dot-b" cx="737.5" cy="177.0" r="5"><title>20261009T142536Z : 95,0 %</title></circle>
+<circle class="dot-b" cx="695.0" cy="177.0" r="5"><title>20261009T145539Z : 90,0 %</title></circle>
+<circle class="dot-b" cx="737.5" cy="144.0" r="5"><title>20261009T152126Z : 95,0 %</title></circle>
+<line class="mean-mark" x1="613.4" y1="142" x2="613.4" y2="190"/>
+<text x="804" y="170" font-size="12.5" class="t-b">80 %</text>
+<text x="8" y="226" font-size="12.5">Bénin · premier essai</text>
+<circle class="dot-a" cx="294.3" cy="222.0" r="5"><title>20261003T101648Z : 42,9 %</title></circle>
+<circle class="dot-a" cx="294.3" cy="211.0" r="5"><title>20261003T104704Z : 42,9 %</title></circle>
+<circle class="dot-a" cx="294.3" cy="233.0" r="5"><title>20261003T111657Z : 42,9 %</title></circle>
+<circle class="dot-b" cx="655.0" cy="222.0" r="5"><title>20261009T123313Z : 85,3 %</title></circle>
+<circle class="dot-b" cx="408.1" cy="222.0" r="5"><title>20261009T130341Z : 56,2 %</title></circle>
+<circle class="dot-b" cx="655.0" cy="211.0" r="5"><title>20261009T132934Z : 85,3 %</title></circle>
+<circle class="dot-b" cx="408.1" cy="211.0" r="5"><title>20261009T135942Z : 56,2 %</title></circle>
+<circle class="dot-b" cx="655.0" cy="233.0" r="5"><title>20261009T142536Z : 85,3 %</title></circle>
+<circle class="dot-b" cx="408.1" cy="233.0" r="5"><title>20261009T145539Z : 56,2 %</title></circle>
+<circle class="dot-b" cx="655.0" cy="200.0" r="5"><title>20261009T152126Z : 85,3 %</title></circle>
+<line class="mean-mark" x1="472.3" y1="198" x2="472.3" y2="246"/>
+<text x="804" y="226" font-size="12.5" class="t-b">64 %</text>
+</svg>
+        </div>
+        <figcaption><b>Figure 8.</b> Citations valides sur les témoins, un point par exécution. Sur le bénin, les
+        trois exécutions de la première série sont identiques entre elles (51 %), les sept suivantes oscillent
+        entre 90 % et 95 %.</figcaption>
+      </figure>
+      <p>L'écart du témoin bénin entre les deux séries n'est pas expliqué par le code : même étiquette, même modèle,
+      même build du serveur d'inférence, même température et même graine. Il illustre ce que la documentation dit de
+      la reproductibilité : elle n'est pas garantie au mot près, et c'est pourquoi chaque cas est exécuté plusieurs
+      fois. Les constats rejetés ne vont jamais dans le rapport.</p>
+      <h3>Faits des témoins, dans le rapport principal</h3>
+      <div class="table-wrap">
+      <table class="small">
+        <thead><tr><th>Fait</th><th>Description</th><th>Ambigu</th><th>Bénin</th></tr></thead>
+        <tbody>
+<tr><td><code>SY-01</code></td><td>Numéro de série</td><td><span class="meter "><i style="width:100%"></i></span>10 / 10</td><td><span class="meter "><i style="width:100%"></i></span>10 / 10</td></tr>
+<tr><td><code>SY-02</code></td><td>Compte iCloud</td><td><span class="meter "><i style="width:100%"></i></span>10 / 10</td><td><span class="meter "><i style="width:100%"></i></span>10 / 10</td></tr>
+<tr><td><code>SY-03</code></td><td>Contact « Paul Martin » (atelier)</td><td><span class="meter "><i style="width:100%"></i></span>10 / 10</td><td><span class="meter "><i style="width:100%"></i></span>10 / 10</td></tr>
+<tr><td><code>SY-04</code></td><td>Rendez-vous au quai 7 proposé sur Signal</td><td><span class="meter "><i style="width:100%"></i></span>10 / 10</td><td><span class="meter mid"><i style="width:70%"></i></span>7 / 10</td></tr>
+<tr><td><code>SY-05</code></td><td>Réseau Wi-Fi connu</td><td><span class="meter "><i style="width:100%"></i></span>10 / 10</td><td><span class="meter "><i style="width:100%"></i></span>10 / 10</td></tr>
+<tr><td><code>SY-06</code></td><td>Lieu significatif</td><td><span class="meter low"><i style="width:10%"></i></span>1 / 10</td><td><span class="meter mid"><i style="width:70%"></i></span>7 / 10</td></tr>
+        </tbody>
+      </table>
+      </div>
+    </section>
+
+    <!-- ========================================================================================== -->
+    <section id="evolution">
+      <h2>Par rapport à la première publication</h2>
+      <p>Les chiffres publiés le 3 octobre venaient de 3 exécutions par cas. Le 5 octobre, un audit des jeux de
+      données face aux sorties iLEAPP a corrigé plusieurs règles de notation, sans toucher au harness :</p>
+      <ul>
+        <li><strong>Hickman</strong> : trois faits citaient le mauvais export (le numéro de série est dans
+        <em>Trusted Peers</em>, le build dans <em>System Version plist</em>, l'export Telegram n'a pas de tiret).</li>
+        <li><strong>Témoins</strong> : l'adresse iCloud est aussi dans un second export ; le contact « Paul Martin » est
+        reconnu même écrit en deux champs ; le rendez-vous exige le quai <em>et</em> l'heure, une simple recherche du
+        lieu ne compte plus ; la liste des termes interdits est complétée (infractions du catalogue, articles du
+        Code pénal).</li>
+        <li><strong>Seuil</strong> : 0 scénario retenu et 0 accusation inventée, appliqué aux deux témoins.</li>
+      </ul>
+      <div class="table-wrap">
+      <table>
+        <thead><tr><th>Mesure</th><th class="num">3 oct. · 3 exécutions</th><th class="num">13 oct. · campagne complète</th></tr></thead>
+        <tbody>
+          <tr><td>Magnet · scénarios attendus retrouvés</td><td class="num">100 %</td><td class="num">100 % (10 / 10)</td></tr>
+          <tr><td>Magnet · rappel du rapport principal</td><td class="num">61 %</td><td class="num">68 % (61–78)</td></tr>
+          <tr><td>Magnet · rappel de la lecture</td><td class="num">82 %</td><td class="num">82 % (72–89)</td></tr>
+          <tr><td>Magnet · citations valides</td><td class="num">97 %</td><td class="num">97 % (92–99)</td></tr>
+          <tr><td>Hickman</td><td class="num">non évalué</td><td class="num">5 exécutions</td></tr>
+          <tr><td>Ambigu · scénarios retenus par exécution</td><td class="num">0,33</td><td class="num">0,2 (2 / 10)</td></tr>
+          <tr><td>Ambigu · citations valides</td><td class="num">86 %</td><td class="num">92 % (72–97)</td></tr>
+          <tr><td>Bénin · rappel du rapport principal</td><td class="num">50 %</td><td class="num">90 % (67–100)</td></tr>
+          <tr><td>Bénin · citations valides</td><td class="num">51 %</td><td class="num">80 % (51–95)</td></tr>
+        </tbody>
+      </table>
+      </div>
+      <p class="small muted">Renoter les trois premières exécutions du bénin avec le jeu corrigé fait déjà passer son
+      rappel de 50 % à 67 % ; le reste vient des sept nouvelles exécutions. Sur Magnet, le jeu n'a pas changé : la
+      hausse du rappel vient uniquement des nouvelles exécutions.</p>
+    </section>
+
+    <!-- ========================================================================================== -->
+    <section id="durees">
+      <h2>Durées et volumes</h2>
+      <div class="table-wrap">
+      <table class="small">
+        <thead><tr><th>Cas (exécutions)</th><th class="num">Durée</th><th class="num">Temps de modèle</th><th class="num">Appels</th><th class="num">Tokens générés</th><th class="num">Constats vérifiés</th><th class="num">Rejetés</th></tr></thead>
+        <tbody>
+<tr><td>Magnet (10)</td><td class="num">≈ 5 h 57</td><td class="num">13 h 17</td><td class="num">45</td><td class="num">88 k</td><td class="num">328</td><td class="num">11</td></tr>
+<tr><td>Hickman (5)</td><td class="num">≈ 30 h</td><td class="num">103 h 39</td><td class="num">335</td><td class="num">611 k</td><td class="num">2 243</td><td class="num">112</td></tr>
+<tr><td>Ambigu (10)</td><td class="num">≈ 54 min</td><td class="num">1 h 04</td><td class="num">11</td><td class="num">13 k</td><td class="num">57</td><td class="num">5</td></tr>
+<tr><td>Bénin (10)</td><td class="num">≈ 28 min</td><td class="num">35 min</td><td class="num">4</td><td class="num">8 k</td><td class="num">32</td><td class="num">8</td></tr>
+        </tbody>
+      </table>
+      </div>
+      <p>Valeurs moyennes par exécution. La durée est mesurée à l'horloge, d'après le journal de la série
+      complémentaire. Le temps de modèle additionne la durée de chaque appel ; plusieurs appels tournant en parallèle sur le serveur
+      d'inférence, il dépasse la durée réelle. Hickman est l'ordre de grandeur d'un vrai téléphone chargé : plus
+      d'une journée de calcul sur la configuration de référence.</p>
+    </section>
+
+    <!-- ========================================================================================== -->
+    <section id="lecture">
+      <h2>Comment lire ces chiffres</h2>
+      <div class="two-col">
+        <div class="yes">
+          <h4>Ce qu'ils établissent</h4>
+          <ul class="small">
+            <li>Aucun constat sans preuve valide n'atteint le rapport, sur 35 exécutions et quatre cas.</li>
+            <li>Le contrôle automatique tient sur un vrai téléphone jamais vu (95 % de citations valides sur Hickman).</li>
+            <li>Les scénarios d'un cas réel connu sont retrouvés de façon stable (Magnet, 10 / 10).</li>
+            <li>La dispersion d'une exécution à l'autre est mesurée, pas supposée.</li>
+          </ul>
+        </div>
+        <div class="no">
+          <h4>Ce qu'ils ne disent pas</h4>
+          <ul class="small">
+            <li>Magnet a servi au réglage : ses chiffres sont optimistes. Hickman est la mesure honnête, mais sur
+            5 exécutions et 8 faits seulement.</li>
+            <li>Le rappel mesure le repérage et la citation, pas la compréhension : un fait cité mais mal interprété
+            compte comme retrouvé.</li>
+            <li>La détection des accusations se fait par mots-clés : elle compte parfois une phrase qui écarte
+            l'accusation.</li>
+            <li>Ces chiffres comparent des versions du système ; ils ne certifient aucun rapport.</li>
+          </ul>
+        </div>
+      </div>
+      <h3>Pistes ouvertes par cette campagne</h3>
+      <ul>
+        <li>Les scénarios retenus sur Hickman et sur le témoin ambigu : le passage d'un scénario examiné à un scénario
+        retenu est le point à durcir.</li>
+        <li>Les faits vérifiés à la lecture mais pas repris par la rédaction (écart d'environ 14 points sur Magnet et
+        sur le témoin ambigu, 10 sur Hickman).</li>
+        <li>Les deux faits de Magnet hors d'atteinte : ils demandent une extraction plus large, pas un meilleur
+        modèle.</li>
+      </ul>
+    </section>
+
+    <!-- ========================================================================================== -->
+    <section id="tableau">
+      <h2>Tableau complet</h2>
+      <p class="small muted">Moyenne (min–max) sur toutes les exécutions de chaque cas. « n/a » : mesure sans objet
+      (aucun scénario attendu). Les pourcentages des colonnes min–max sont arrondis à l'unité.</p>
+      <div class="table-wrap">
+      <table class="small">
+        <thead><tr><th>Mesure</th><th class="num">Magnet (10)</th><th class="num">Hickman (5)</th><th class="num">Ambigu (10)</th><th class="num">Bénin (10)</th></tr></thead>
+        <tbody>
+<tr><td>Scénarios attendus retrouvés (retenus, preuves à l'appui)</td><td class="num">100 %</td><td class="num">n/a</td><td class="num">n/a</td><td class="num">n/a</td></tr>
+<tr><td>Scénarios retenus par exécution (témoin : 0 attendu)</td><td class="num">2,7 (2–4)</td><td class="num">0,8 (0–2)</td><td class="num">0,2 (0–1)</td><td class="num">0</td></tr>
+<tr><td>Scénarios examinés par exécution</td><td class="num">3,5 (3–4)</td><td class="num">3,6 (3–4)</td><td class="num">2</td><td class="num">0</td></tr>
+<tr><td>Rappel du rapport principal</td><td class="num">68 % (61–78)</td><td class="num">68 % (50–100)</td><td class="num">85 % (83–100)</td><td class="num">90 % (67–100)</td></tr>
+<tr><td>Rappel de la lecture</td><td class="num">82 % (72–89)</td><td class="num">78 % (75–88)</td><td class="num">100 %</td><td class="num">100 %</td></tr>
+<tr><td>Rappel hors faits d'appréciation</td><td class="num">72 % (65–82)</td><td class="num">68 % (50–100)</td><td class="num">85 % (83–100)</td><td class="num">90 % (67–100)</td></tr>
+<tr><td>Fait seulement énoncé (sans exiger la preuve)</td><td class="num">68 % (61–78)</td><td class="num">68 % (50–100)</td><td class="num">85 % (83–100)</td><td class="num">90 % (67–100)</td></tr>
+<tr><td>Plafond de rappel</td><td class="num">89 %</td><td class="num">100 %</td><td class="num">100 %</td><td class="num">100 %</td></tr>
+<tr><td>Source exacte des faits retrouvés</td><td class="num">100 %</td><td class="num">100 %</td><td class="num">100 %</td><td class="num">100 %</td></tr>
+<tr><td>Citations valides (après relance)</td><td class="num">97 % (92–99)</td><td class="num">95 % (95–96)</td><td class="num">92 % (72–97)</td><td class="num">80 % (51–95)</td></tr>
+<tr><td>Citations valides au premier essai</td><td class="num">93 % (88–96)</td><td class="num">91 % (90–91)</td><td class="num">77 % (68–99)</td><td class="num">64 % (43–85)</td></tr>
+<tr><td>Constats émis sans preuve valide</td><td class="num">0 % (0–0)</td><td class="num">0 %</td><td class="num">0 %</td><td class="num">0 %</td></tr>
+<tr><td>Réponses illisibles par exécution</td><td class="num">0</td><td class="num">1 (0–3)</td><td class="num">0</td><td class="num">0</td></tr>
+<tr><td>Faits couverts par un même constat (max)</td><td class="num">2,5 (2–3)</td><td class="num">1,8 (1–3)</td><td class="num">2</td><td class="num">1,7 (1–2)</td></tr>
+<tr><td>Constats « empilement de mots-clés » par exécution</td><td class="num">0,6 (0–2)</td><td class="num">0,2 (0–1)</td><td class="num">0</td><td class="num">0</td></tr>
+<tr><td>Accusations inventées par exécution</td><td class="num">0</td><td class="num">0,4 (0–2)</td><td class="num">0</td><td class="num">0</td></tr>
+<tr><td>Constats vérifiés par exécution</td><td class="num">328,5 (321–350)</td><td class="num">2 243,4 (2 185–2 285)</td><td class="num">56,7 (49–73)</td><td class="num">32,3 (21–38)</td></tr>
+<tr><td>Constats rejetés par exécution</td><td class="num">11,3 (3–29)</td><td class="num">112,2 (96–128)</td><td class="num">4,8 (2–20)</td><td class="num">8 (2–20)</td></tr>
+<tr><td>Constats imprimés dans le rapport principal</td><td class="num">125,3 (112–158)</td><td class="num">126 (110–142)</td><td class="num">20,5 (13–43)</td><td class="num">18,3 (7–24)</td></tr>
+<tr><td>Temps de modèle cumulé par exécution (s)</td><td class="num">47 871,7 (40 770,4–54 697)</td><td class="num">373 185,0 (362 835,2–380 089,5)</td><td class="num">3 850,2 (3 296,8–4 567,3)</td><td class="num">2 100,9 (1 914,4–2 216,8)</td></tr>
+        </tbody>
+      </table>
+      </div>
+      <p class="small muted">Faits hors d'atteinte : GT-08 et GT-09 (Magnet) ; aucun ailleurs. Réponses du modèle relues
+      du cache : 0 sur toutes les exécutions. Modèle : <code>qwen3.8:latest</code>, température 0,1, graine 0,
+      llama.cpp build b10731.</p>
+    </section>
+
+    <!-- ========================================================================================== -->
+    <section id="reproduire">
+      <h2>Reproduire</h2>
+      <p>La campagne repose sur les commandes de la <a href="technique.html#evaluation">documentation technique</a>,
+      lancées depuis un clone figé à l'étiquette évaluée (<code>git checkout phase36-fixes</code>) avec le cache
+      coupé (<code>LLM_CACHE=</code>).</p>
+<pre data-title="bash"><code><span class="c"># 1. rejouer n exécutions d'un cas (une par ligne de la figure 1)</span>
+.venv/bin/python -m forensic_harness.evaluate --dataset datasets/magnet_ground_truth.json \
+    --case &lt;SORTIE_ILEAPP_MAGNET&gt; --runs 7 --out &lt;CAMPAGNE&gt;/eval
+
+<span class="c"># 2. renoter ensemble toutes les exécutions complètes d'un cas, sans appeler le modèle</span>
+.venv/bin/python -m forensic_harness.evaluate --dataset datasets/hickman_ios17.json \
+    --score &lt;CAMPAGNE&gt;/runs/iOS17-Hickman-iLEAPP_Output/* --out &lt;CAMPAGNE&gt;/total
+
+<span class="c"># 3. témoins : même chose avec le seuil bloquant (code de sortie 1 si non tenu)</span>
+.venv/bin/python -m forensic_harness.evaluate --dataset datasets/synthetic_ambiguous.json \
+    --score &lt;CAMPAGNE&gt;/runs/synthetic-ambiguous/* --out &lt;CAMPAGNE&gt;/total --gate datasets/gate_temoin.json</code></pre>
+      <p>Une exécution n'est renotée que si son dossier contient <code>report.md</code> et <code>findings.json</code>.
+      Sur la machine de référence, la campagne est enchaînée par un script de file d'attente rangé avec ses résultats
+      (<code>runs/real/x10/queue.sh</code>, hors du dépôt), qui produit <code>journal.txt</code> et
+      <code>RESULTATS.md</code>. Chaque exécution notée est aussi inscrite comme expérience dans Langfuse.</p>
+    </section>
+
+    <p class="footer">Résultats de la campagne terminée le 13 octobre 2026 (code à l'étiquette
+    <code>phase36-fixes</code>, jeux de données corrigés le 5 octobre). Code source :
+    <a href="https://github.com/Wo0keyz/Harness-forensique-iOS">Wo0keyz/Harness-forensique-iOS</a> et
+    <a href="https://github.com/Wo0keyz/iLEAPP-MCP/tree/feat/harness-provenance">Wo0keyz/iLEAPP-MCP</a>. Les faits
+    de vérité terrain sont résumés sans leurs identifiants.</p>
+  </main>
+</div>
+</body>
+</html>

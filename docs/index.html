@@ -16,6 +16,7 @@
     <nav class="tabs" aria-label="Pages">
       <a href="index.html" aria-current="page">Accueil</a>
       <a href="analystes.html">Guide analystes</a>
+      <a href="resultats.html">Résultats</a>
       <a href="technique.html">Documentation technique</a>
     </nav>
     <button class="theme-toggle" type="button">Thème sombre</button>
@@ -35,6 +36,7 @@
         <li><a href="#resultats">Résultats actuels</a></li>
         <li><a href="#demarrage">Démarrage rapide</a></li>
         <li><a href="#composants">Composants</a></li>
+        <li><a href="#code">Code source</a></li>
         <li><a href="#documentation">Lire la suite</a></li>
       </ol>
     </details>
@@ -55,8 +57,9 @@
         <tr><th>Traces</th><td>Langfuse auto-hébergé</td></tr>
         <tr><th>Réseau</th><td>100 % local, isolement Internet possible</td></tr>
         <tr><th>Droit</th><td>Catalogue suisse (CP, LStup), <em>projet</em></td></tr>
-        <tr><th>Tests</th><td>111 (pytest, sans modèle)</td></tr>
-        <tr><th>État</th><td>Prototype évalué sur 3 cas</td></tr>
+        <tr><th>Tests</th><td>112 (pytest, sans modèle)</td></tr>
+        <tr><th>État</th><td>Prototype évalué sur 4 cas, 35 exécutions</td></tr>
+        <tr><th>Code</th><td><a href="https://github.com/Wo0keyz/Harness-forensique-iOS">Harness-forensique-iOS</a>, <a href="https://github.com/Wo0keyz/iLEAPP-MCP/tree/feat/harness-provenance">iLEAPP-MCP</a></td></tr>
       </tbody>
     </table>
 
@@ -234,32 +237,35 @@
 
     <section id="resultats">
       <h2>Résultats actuels</h2>
-      <p>Évaluation <code>phase36-fixes</code> du 3 octobre 2026 : chaque cas est exécuté trois fois, sur une copie
-      figée du code, sans cache. Magnet est une image iOS publique (CTF) avec une vérité terrain de 18 faits et
-      3 scénarios ; les deux témoins sont synthétiques, et le bon résultat y est de ne retenir aucun scénario.</p>
+      <p>Campagne terminée le 13 octobre 2026 : 35 exécutions de bout en bout, sur une copie figée du code, sans
+      cache. Magnet est une image iOS publique (CTF) avec 18 faits et 3 scénarios connus ; Hickman, une image iOS 17
+      publique sans infraction, <strong>jamais utilisée pour régler le harness</strong> ; les deux témoins sont
+      synthétiques, et le bon résultat y est de ne retenir aucun scénario.</p>
       <div class="kpis">
-        <div class="kpi ok"><div class="v">100 %</div><div class="l">scénarios attendus retrouvés sur Magnet</div></div>
-        <div class="kpi ok"><div class="v">97 %</div><div class="l">citations valides sur Magnet</div></div>
-        <div class="kpi"><div class="v">82 %</div><div class="l">rappel des faits à la lecture (Magnet)</div></div>
-        <div class="kpi ok"><div class="v">0</div><div class="l">accusation inventée, toutes exécutions</div></div>
-        <div class="kpi ko"><div class="v">1 / 3</div><div class="l">passes du cas ambigu qui retiennent un scénario à tort</div></div>
-        <div class="kpi ko"><div class="v">51 %</div><div class="l">citations valides sur le cas bénin</div></div>
+        <div class="kpi ok"><div class="v">100 %</div><div class="l">scénarios attendus retrouvés sur Magnet, 10 exécutions sur 10</div></div>
+        <div class="kpi ok"><div class="v">0 %</div><div class="l">constats émis sans preuve valide, 35 exécutions</div></div>
+        <div class="kpi ok"><div class="v">95 %</div><div class="l">citations valides sur Hickman, jamais vu (97 % sur Magnet)</div></div>
+        <div class="kpi"><div class="v">68 %</div><div class="l">des faits connus repris dans le rapport (Magnet et Hickman)</div></div>
+        <div class="kpi ko"><div class="v">3 / 5</div><div class="l">exécutions Hickman qui retiennent un scénario sans infraction</div></div>
+        <div class="kpi ko"><div class="v">2 / 10</div><div class="l">exécutions du témoin ambigu qui retiennent un scénario à tort</div></div>
       </div>
-      <p class="small muted">Magnet a aussi servi à régler les prompts : ses chiffres sont optimistes. Le cas public
-      tenu à l'écart (image iOS 17 de Joshua Hickman) n'a pas encore été évalué. Détail et graphiques :
-      <a href="analystes.html#resultats">guide analystes</a> ; tableaux complets :
-      <a href="technique.html#resultats">documentation technique</a>.</p>
+      <p class="small muted">Magnet a aussi servi à régler les prompts : ses chiffres sont optimistes ; Hickman donne
+      la mesure la plus honnête. Graphiques, faits un par un et limites : page
+      <a href="resultats.html">Résultats</a>.</p>
     </section>
 
     <section id="demarrage">
       <h2>Démarrage rapide</h2>
-      <p>Prérequis : une sortie iLEAPP, le serveur d'inférence llama.cpp démarré, et les deux dépôts
-      <code>forensic-langgraph</code> et <code>iLEAPP-MCP</code> clonés côte à côte. L'installation complète, depuis une
-      machine vierge, est dans la <a href="technique.html#installation">documentation technique</a>.</p>
-<pre data-title="bash"><code>cd forensic-langgraph
+      <p>Prérequis : une sortie iLEAPP, le serveur d'inférence llama.cpp démarré, et les deux dépôts clonés côte à
+      côte. L'installation complète, depuis une machine vierge, est dans la
+      <a href="technique.html#installation">documentation technique</a>.</p>
+<pre data-title="bash"><code>git clone -b feat/harness-provenance https://github.com/Wo0keyz/iLEAPP-MCP.git
+git clone https://github.com/Wo0keyz/Harness-forensique-iOS.git forensic-langgraph
+
+cd forensic-langgraph
 uv sync                                   <span class="c"># environnement à partir de uv.lock</span>
 cp .env.example .env &amp;&amp; chmod 600 .env    <span class="c"># puis renseigner les clés Langfuse</span>
-uv run pytest                             <span class="c"># 111 tests, sans modèle</span>
+uv run pytest                             <span class="c"># 112 tests, sans modèle</span>
 
 <span class="c"># coût prévu (lots, tokens), sans appeler le modèle</span>
 uv run python -m forensic_harness /chemin/vers/sortie_iLEAPP --plan
@@ -281,14 +287,32 @@ uv run python -m forensic_harness --verify runs/&lt;cas&gt;/&lt;exécution&gt; -
       <table>
         <thead><tr><th>Composant</th><th>Rôle</th><th>Origine</th></tr></thead>
         <tbody>
-          <tr><td><code>forensic-langgraph</code></td><td>Le harness : graphe LangGraph, agents, contrôle, rapport, chaîne de possession, évaluation, infrastructure versionnée</td><td>Dépôt du projet</td></tr>
-          <tr><td><code>iLEAPP-MCP</code></td><td>Serveur MCP en lecture seule sur une sortie iLEAPP, avec la provenance de chaque ligne</td><td><a href="https://github.com/Wo0keyz/iLEAPP-MCP">Wo0keyz/iLEAPP-MCP</a>, branche <code>feat/harness-provenance</code></td></tr>
+          <tr><td><code>forensic-langgraph</code></td><td>Le harness : graphe LangGraph, agents, contrôle, rapport, chaîne de possession, évaluation, infrastructure versionnée</td><td><a href="https://github.com/Wo0keyz/Harness-forensique-iOS">Wo0keyz/Harness-forensique-iOS</a></td></tr>
+          <tr><td><code>iLEAPP-MCP</code></td><td>Serveur MCP en lecture seule sur une sortie iLEAPP, avec la provenance de chaque ligne</td><td><a href="https://github.com/Wo0keyz/iLEAPP-MCP/tree/feat/harness-provenance">Wo0keyz/iLEAPP-MCP</a>, branche <code>feat/harness-provenance</code></td></tr>
           <tr><td>iLEAPP</td><td>Transforme l'image du téléphone en exports (TSV, SQLite, HTML)</td><td><a href="https://github.com/abrignoni/iLEAPP">abrignoni/iLEAPP</a></td></tr>
           <tr><td>llama.cpp</td><td>Serveur d'inférence local, API compatible OpenAI, sortie contrainte par schéma JSON</td><td>Image <code>ghcr.io/ggml-org/llama.cpp</code> épinglée (build b10731)</td></tr>
           <tr><td>Qwen3.8 27B</td><td>Modèle de langage dense, quantifié Q4_K_M</td><td>GGUF identifié par son SHA-256</td></tr>
           <tr><td>Langfuse</td><td>Traces de chaque exécution et expériences d'évaluation</td><td>Auto-hébergé (Docker), images épinglées</td></tr>
         </tbody>
       </table>
+      </div>
+    </section>
+
+    <section id="code">
+      <h2>Code source</h2>
+      <div class="cards">
+        <a class="card code" href="https://github.com/Wo0keyz/Harness-forensique-iOS">
+          <h3>Harness-forensique-iOS</h3>
+          <p>Le harness : graphe LangGraph, prompts, contrôle des constats, rapport, chaîne de possession, jeux
+          d'évaluation et infrastructure (<code>infra/</code>). Se clone sous le nom <code>forensic-langgraph</code>.</p>
+          <span class="go">github.com/Wo0keyz/Harness-forensique-iOS →</span>
+        </a>
+        <a class="card data" href="https://github.com/Wo0keyz/iLEAPP-MCP/tree/feat/harness-provenance">
+          <h3>iLEAPP-MCP</h3>
+          <p>Le serveur MCP en lecture seule sur une sortie iLEAPP. Utiliser la branche
+          <code>feat/harness-provenance</code> : provenance de chaque ligne, recherche exacte, texte des PDF et DOCX.</p>
+          <span class="go">github.com/Wo0keyz/iLEAPP-MCP →</span>
+        </a>
       </div>
     </section>
 
@@ -301,6 +325,12 @@ uv run python -m forensic_harness --verify runs/&lt;cas&gt;/&lt;exécution&gt; -
           garde-fous, l'enquête contradictoire, l'anatomie du rapport, les résultats. Très illustré.</p>
           <span class="go">Ouvrir le guide →</span>
         </a>
+        <a class="card ok" href="resultats.html">
+          <h3>Résultats d'évaluation</h3>
+          <p>La campagne complète : 35 exécutions sur Magnet, sur Hickman (cas jamais vu au réglage) et sur deux
+          témoins. Chaque mesure, chaque fait, ce qui tient et ce qui reste à durcir.</p>
+          <span class="go">Voir les résultats →</span>
+        </a>
         <a class="card code" href="technique.html">
           <h3>Documentation technique</h3>
           <p>Tout ce qu'il faut pour reproduire l'installation depuis une machine vierge, puis le fonctionnement
@@ -310,8 +340,8 @@ uv run python -m forensic_harness --verify runs/&lt;cas&gt;/&lt;exécution&gt; -
       </div>
     </section>
 
-    <p class="footer">Documentation établie à partir du code : harness <code>71905ce</code>, iLEAPP-MCP
-    <code>47a630f</code> (branche <code>feat/harness-provenance</code>), résultats d'évaluation du 3 octobre 2026.
+    <p class="footer">Documentation établie à partir du code : harness <code>fbb2702</code>, iLEAPP-MCP
+    <code>8221f33</code> (branche <code>feat/harness-provenance</code>), résultats d'évaluation du 13 octobre 2026.
     Les adresses, chemins et identifiants propres à l'infrastructure sont remplacés par des repères du type
     <code>&lt;IP_POSTE_ANALYSTE&gt;</code>.</p>
   </main>

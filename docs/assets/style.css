@@ -440,6 +440,17 @@ svg .fill-human { fill: var(--c-human); }
 svg .fill-data { fill: var(--c-data); }
 svg .fill-track { fill: var(--border-soft); }
 svg .fill-muted { fill: var(--svg-muted); }
+svg .fill-warn { fill: var(--c-warn); }
+/* graphiques de résultats : un point par exécution, creux pour la première série */
+svg .dot-a { fill: var(--svg-fill); stroke: var(--c-code); stroke-width: 1.8; }
+svg .dot-b { fill: var(--c-code); stroke: var(--svg-fill); stroke-width: 1; }
+svg .mean-mark { stroke: var(--text); stroke-width: 2; }
+
+/* jauge dans un tableau (taux de présence d'un fait) */
+.meter { display: inline-block; vertical-align: middle; width: 84px; height: 8px; border-radius: 4px; background: var(--border-soft); overflow: hidden; margin-right: 6px; }
+.meter > i { display: block; height: 100%; background: var(--c-ok); }
+.meter.mid > i { background: var(--c-warn); }
+.meter.low > i { background: var(--c-ko); }
 svg .grid-line { stroke: var(--border-soft); stroke-width: 1; }
 
 /* légende des couleurs */

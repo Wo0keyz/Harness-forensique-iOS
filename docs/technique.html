@@ -16,6 +16,7 @@
     <nav class="tabs" aria-label="Pages">
       <a href="index.html">Accueil</a>
       <a href="analystes.html">Guide analystes</a>
+      <a href="resultats.html">Résultats</a>
       <a href="technique.html" aria-current="page">Documentation technique</a>
     </nav>
     <button class="theme-toggle" type="button">Thème sombre</button>
@@ -60,7 +61,7 @@
         <li><a href="#mcp">Serveur iLEAPP-MCP</a></li>
         <li><a href="#observabilite">Observabilité</a></li>
         <li><a href="#evaluation">Évaluation</a></li>
-        <li><a href="#resultats">Résultats phase36-fixes</a></li>
+        <li><a href="#resultats">Résultats (résumé)</a></li>
         <li><a href="#tests">Tests et CI</a></li>
         <li><a href="#moe">Serveur de lecture MoE</a></li>
         <li><a href="#depannage">Limites et dépannage</a></li>
@@ -79,9 +80,10 @@
       <code>&lt;IP_POSTE_ANALYSTE&gt;</code> (poste autorisé à joindre la machine), <code>&lt;INTERFACE&gt;</code>
       (interface réseau vers ce poste), <code>&lt;RESEAU_LOCAL&gt;</code> (ex. <code>10.0.0.0/24</code>),
       <code>&lt;HOTE_ANALYSE&gt;</code> (nom ou adresse de la machine d'analyse), <code>&lt;utilisateur&gt;</code>
-      (compte Unix) et <code>&lt;URL_DEPOT_HARNESS&gt;</code> (dépôt Git du harness). Aucun secret n'est reproduit.
-      Les chemins de code renvoient au dépôt <code>forensic-langgraph</code> (commit <code>71905ce</code>) et au
-      dépôt <code>iLEAPP-MCP</code> (commit <code>47a630f</code>).
+      (compte Unix). Aucun secret n'est reproduit.
+      Les chemins de code renvoient au dépôt du harness, <a href="https://github.com/Wo0keyz/Harness-forensique-iOS">Wo0keyz/Harness-forensique-iOS</a> (cloné sous le nom <code>forensic-langgraph</code>,
+      commit <code>fbb2702</code>), et au serveur MCP, <a href="https://github.com/Wo0keyz/iLEAPP-MCP/tree/feat/harness-provenance">Wo0keyz/iLEAPP-MCP</a> (branche <code>feat/harness-provenance</code>, commit
+      <code>8221f33</code>).
     </div>
 
     <!-- ========================================================================================== -->
@@ -95,8 +97,8 @@
       <table>
         <thead><tr><th>Élément</th><th>Emplacement de référence</th><th>Rôle</th></tr></thead>
         <tbody>
-          <tr><td><code>forensic-langgraph</code></td><td><code>~/forensic-langgraph</code></td><td>Le harness (paquet <code>forensic_harness</code>), ses jeux d'évaluation, son infrastructure versionnée (<code>infra/</code>).</td></tr>
-          <tr><td><code>iLEAPP-MCP</code></td><td><code>~/iLEAPP-MCP</code>, à côté du précédent</td><td>Serveur MCP (FastMCP) sur une sortie iLEAPP, branche <code>feat/harness-provenance</code>. Dépendance du harness par chemin relatif.</td></tr>
+          <tr><td><code>forensic-langgraph</code></td><td><code>~/forensic-langgraph</code></td><td>Le harness (paquet <code>forensic_harness</code>), ses jeux d'évaluation, son infrastructure versionnée (<code>infra/</code>). Code : <a href="https://github.com/Wo0keyz/Harness-forensique-iOS">Wo0keyz/Harness-forensique-iOS</a>.</td></tr>
+          <tr><td><code>iLEAPP-MCP</code></td><td><code>~/iLEAPP-MCP</code>, à côté du précédent</td><td>Serveur MCP (FastMCP) sur une sortie iLEAPP, branche <code>feat/harness-provenance</code>. Dépendance du harness par chemin relatif. Code : <a href="https://github.com/Wo0keyz/iLEAPP-MCP/tree/feat/harness-provenance">Wo0keyz/iLEAPP-MCP</a>.</td></tr>
           <tr><td>iLEAPP</td><td><code>~/iLEAPP</code></td><td>Traitement de l'image iOS en exports. Utilisé une fois par cas, en amont.</td></tr>
           <tr><td>Langfuse</td><td><code>~/langfuse-local</code></td><td>Compose Docker de Langfuse v4, hors du dépôt (il contient des secrets).</td></tr>
         </tbody>
@@ -373,19 +375,17 @@ mkdir -p ~/cases/&lt;cas&gt;-iLEAPP_Output
 <pre data-title="bash"><code>cd ~
 git clone https://github.com/Wo0keyz/iLEAPP-MCP.git
 git -C iLEAPP-MCP checkout feat/harness-provenance   <span class="c"># provenance par ligne, recherche exacte, texte PDF/DOCX</span>
-git clone &lt;URL_DEPOT_HARNESS&gt; forensic-langgraph
+git clone https://github.com/Wo0keyz/Harness-forensique-iOS.git forensic-langgraph
 
 cd forensic-langgraph
 uv sync                                    <span class="c"># crée .venv à partir de uv.lock (Python 3.14)</span>
 cp .env.example .env &amp;&amp; chmod 600 .env     <span class="c"># puis renseigner les clés Langfuse</span>
-uv run pytest -q                           <span class="c"># 111 tests, cas synthétique, faux modèle : aucun serveur requis</span></code></pre>
-      <div class="callout limit">
-        <span class="callout-title">Branche du serveur MCP</span>
-        Au moment de la rédaction, <code>feat/harness-provenance</code> n'existe que dans le clone local de la machine
-        de référence ; le dépôt distant <code>Wo0keyz/iLEAPP-MCP</code> s'arrête à <code>10e4428</code> sur
-        <code>main</code>. Il faut pousser cette branche (ou la fusionner) pour que le clonage ci-dessus, et la CI,
-        fonctionnent. De même, le dépôt du harness n'a pas encore de dépôt distant : <code>&lt;URL_DEPOT_HARNESS&gt;</code>
-        est à définir.
+uv run pytest -q                           <span class="c"># 112 tests, cas synthétique, faux modèle : aucun serveur requis</span></code></pre>
+      <div class="callout note">
+        <span class="callout-title">Où trouver le code</span>
+        Harness : <a href="https://github.com/Wo0keyz/Harness-forensique-iOS">Wo0keyz/Harness-forensique-iOS</a>. Serveur MCP : <a href="https://github.com/Wo0keyz/iLEAPP-MCP/tree/feat/harness-provenance">Wo0keyz/iLEAPP-MCP</a> ; la branche <code>feat/harness-provenance</code> est indispensable,
+        <code>main</code> n'a ni la provenance par ligne ni la recherche exacte. Le harness se clone sous le nom
+        <code>forensic-langgraph</code>, celui qu'utilisent cette documentation et les scripts de <code>infra/</code>.
       </div>
 
       <h3 id="inst-reseau"><span class="num">10.</span>Pare-feu et isolement</h3>
@@ -734,7 +734,7 @@ uv run python -m forensic_harness --verify EXÉCUTION [--manifest-sha256 EMPREIN
       </table>
       </div>
       <p>Ces constats sont des signaux de contexte : ils ne suffisent jamais à ouvrir un scénario (le prompt des
-      hypothèses le précise, et le cas témoin Hickman le mesurera).</p>
+      hypothèses le précise, et le cas tenu à l'écart Hickman le mesure : voir les <a href="resultats.html#hickman">résultats</a>).</p>
     </section>
 
     <!-- ========================================================================================== -->
@@ -1117,9 +1117,10 @@ row_digest  = sha256(contenu de la ligne)[:16]</code></pre>
         <thead><tr><th>Fichier</th><th>Cas</th><th>Contenu</th></tr></thead>
         <tbody>
           <tr><td><code>magnet_ground_truth.json</code></td><td>Image publique iPhone 14 Plus, iOS 18.0 (CTF Magnet)</td><td>18 faits (<code>GT-01…18</code>), 3 scénarios (<code>SC-1…3</code>) ; sources auditées export par export (<code>source_audit</code>)</td></tr>
-          <tr><td><code>hickman_ios17.json</code></td><td>Image publique iOS 17 de Joshua Hickman (Digital Corpora, <code>corpora/mobile/iOS17</code>)</td><td>cas tenu à l'écart, aucune infraction ; à traiter d'abord par iLEAPP vers <code>~/cases/iOS17-Hickman-iLEAPP_Output</code></td></tr>
-          <tr><td><code>synthetic_ambiguous.json</code></td><td><code>python -m forensic_harness.synthetic_case DOSSIER --ambigu</code></td><td>6 faits, 16 termes interdits, aucun scénario ne doit être retenu</td></tr>
-          <tr><td><code>synthetic_benign.json</code></td><td><code>python -m forensic_harness.synthetic_case DOSSIER</code></td><td>6 faits, 14 termes interdits</td></tr>
+          <tr><td><code>hickman_ios17.json</code></td><td>Image publique iOS 17 de Joshua Hickman (Digital Corpora, <code>corpora/mobile/iOS17</code>)</td><td>cas tenu à l'écart, aucune infraction : 8 faits (<code>HK-01…08</code>), 16 termes interdits ; à traiter d'abord par iLEAPP vers <code>~/cases/iOS17-Hickman-iLEAPP_Output</code></td></tr>
+          <tr><td><code>synthetic_ambiguous.json</code></td><td><code>python -m forensic_harness.synthetic_case DOSSIER --ambigu</code></td><td>6 faits, 39 termes interdits, aucun scénario ne doit être retenu</td></tr>
+          <tr><td><code>synthetic_benign.json</code></td><td><code>python -m forensic_harness.synthetic_case DOSSIER</code></td><td>6 faits, 33 termes interdits</td></tr>
+          <tr><td><code>gate_temoin.json</code></td><td>les deux témoins</td><td>seuil bloquant : <code>{"max": {"scenarios_retained": 0, "invented_accusations": 0}}</code></td></tr>
         </tbody>
       </table>
       </div>
@@ -1127,14 +1128,16 @@ row_digest  = sha256(contenu de la ligne)[:16]</code></pre>
       apostrophes typographiques), <code>digits:</code> (chiffres d'un même numéro, quels que soient les séparateurs),
       <code>re:</code> (expression régulière), ou <code>{"all": [...]}</code> / <code>{"any": [...]}</code>. Un scénario a
       un <code>match</code> sur sa description et un <code>evidence_match</code> sur les preuves citées. Un terme interdit
-      nié dans sa proposition (« aucun », « pas », « sans »…) ne compte pas comme accusation.</p>
+      nié dans sa proposition (« aucun », « pas », « sans »…) ne compte pas comme accusation. Les jeux ont été
+      audités face aux sorties iLEAPP le 5 octobre 2026 (<code>--audit</code>) : exports cités corrigés pour Hickman,
+      règles et termes interdits complétés pour les témoins.</p>
       <h3>Commandes</h3>
 <pre data-title="bash"><code><span class="c"># rejouer 5 fois et noter</span>
 uv run python -m forensic_harness.evaluate --dataset datasets/magnet_ground_truth.json \
     --case ~/cases/iPhone14Plus-CTF-MAGNET-iLEAPP_Output --runs 5
 
-<span class="c"># noter une exécution existante (aucun appel au modèle)</span>
-uv run python -m forensic_harness.evaluate --dataset datasets/magnet_ground_truth.json --score runs/&lt;cas&gt;/&lt;UTC&gt;
+<span class="c"># noter une ou plusieurs exécutions existantes, agrégées ensemble (aucun appel au modèle)</span>
+uv run python -m forensic_harness.evaluate --dataset datasets/magnet_ground_truth.json --score runs/&lt;cas&gt;/*
 
 <span class="c"># vérifier que le jeu tient face au dossier (exports cités présents, valeurs retrouvées)</span>
 uv run python -m forensic_harness.evaluate --dataset datasets/magnet_ground_truth.json --case &lt;dossier&gt; --audit
@@ -1157,8 +1160,11 @@ READ_LLM_URL=http://localhost:8081/v1 READ_MODEL_NAME=qwen3.6-35b-a3b \
     bash infra/evaluation.sh phase36-fixes 3 moe</code></pre>
       <p>Le script clone le dépôt dans <code>runs/real/eval-&lt;étiquette&gt;[-variante]/frozen</code>, se place sur
       l'étiquette, réutilise le <code>.venv</code> et le <code>.env</code> du dépôt, coupe le cache
-      (<code>LLM_CACHE=</code>), génère les deux cas synthétiques, rejoue Magnet, Hickman (s'il existe), ambigu et bénin,
-      tient un <code>journal.txt</code>, et assemble <code>RESULTATS.md</code>.</p>
+      (<code>LLM_CACHE=</code>), génère les deux cas synthétiques, rejoue Magnet, Hickman (s'il existe), ambigu et bénin
+      (ces deux derniers avec <code>--gate datasets/gate_temoin.json</code>), tient un <code>journal.txt</code>, et
+      assemble <code>RESULTATS.md</code>. Pour compléter une campagne, on rejoue des exécutions supplémentaires dans
+      le même clone figé, puis on renote ensemble tous les dossiers complets avec <code>--score</code> : c'est ainsi
+      qu'a été obtenue la campagne publiée (voir <a href="resultats.html#reproduire">Résultats</a>).</p>
       <div class="callout warn">
         <code>evaluation.sh</code> contient des chemins absolus de la machine de référence (dépôt sous
         <code>/home/&lt;utilisateur&gt;/forensic-langgraph</code>, Magnet sous
@@ -1174,50 +1180,34 @@ READ_LLM_URL=http://localhost:8081/v1 READ_MODEL_NAME=qwen3.6-35b-a3b \
 
     <!-- ========================================================================================== -->
     <section id="resultats">
-      <h2>Résultats de la campagne <code>phase36-fixes</code></h2>
-      <p>Campagne du 2 au 3 octobre 2026, 3 exécutions par cas, modèle <code>qwen3.8:latest</code> sur toutes les
-      étapes, cache coupé. Hickman : non évalué (dossier absent au moment de la campagne). Valeurs : moyenne (min–max).</p>
+      <h2>Résultats (résumé)</h2>
+      <p>Campagne terminée le 13 octobre 2026 : code à l'étiquette <code>phase36-fixes</code>, modèle
+      <code>qwen3.8:latest</code> sur toutes les étapes, cache coupé, 35 exécutions renotées ensemble avec les jeux
+      corrigés le 5 octobre. Valeurs : moyenne (min–max). Graphiques, faits un par un, durées et tableau complet :
+      page <a href="resultats.html">Résultats</a>.</p>
       <div class="table-wrap">
       <table class="small">
-        <thead><tr><th>Mesure</th><th class="num">Magnet</th><th class="num">Ambigu</th><th class="num">Bénin</th></tr></thead>
+        <thead><tr><th>Mesure</th><th class="num">Magnet (10)</th><th class="num">Hickman (5)</th><th class="num">Ambigu (10)</th><th class="num">Bénin (10)</th></tr></thead>
         <tbody>
-          <tr><td>Scénarios attendus retrouvés</td><td class="num">100 % (100–100)</td><td class="num">n/a</td><td class="num">n/a</td></tr>
-          <tr><td>Scénarios retenus par exécution</td><td class="num">2,33 (2–3)</td><td class="num">0,33 (0–1)</td><td class="num">0 (0–0)</td></tr>
-          <tr><td>Scénarios examinés par exécution</td><td class="num">3 (3–3)</td><td class="num">2 (2–2)</td><td class="num">0 (0–0)</td></tr>
-          <tr><td>Rappel du rapport principal</td><td class="num">61 % (61–61)</td><td class="num">89 % (83–100)</td><td class="num">50 % (50–50)</td></tr>
-          <tr><td>Rappel de la lecture</td><td class="num">82 % (78–83)</td><td class="num">100 %</td><td class="num">100 %</td></tr>
-          <tr><td>Rappel hors faits d'appréciation</td><td class="num">65 % (65–65)</td><td class="num">89 % (83–100)</td><td class="num">50 % (50–50)</td></tr>
-          <tr><td>Fait seulement énoncé</td><td class="num">61 % (61–61)</td><td class="num">89 % (83–100)</td><td class="num">67 % (67–67)</td></tr>
-          <tr><td>Plafond de rappel</td><td class="num">89 % (89–89)</td><td class="num">100 %</td><td class="num">100 %</td></tr>
-          <tr><td>Source exacte des faits retrouvés</td><td class="num">100 %</td><td class="num">100 %</td><td class="num">100 %</td></tr>
-          <tr><td>Citations valides (après relance)</td><td class="num">97 % (97–97)</td><td class="num">86 % (72–92)</td><td class="num">51 % (51–51)</td></tr>
-          <tr><td>Citations valides au premier essai</td><td class="num">94 % (92–95)</td><td class="num">87 % (68–99)</td><td class="num">43 % (43–43)</td></tr>
-          <tr><td>Constats émis sans preuve valide</td><td class="num">0 %</td><td class="num">0 %</td><td class="num">0 %</td></tr>
-          <tr><td>Réponses illisibles par exécution</td><td class="num">0</td><td class="num">0</td><td class="num">0</td></tr>
-          <tr><td>Faits couverts par un même constat (max)</td><td class="num">2,67 (2–3)</td><td class="num">2</td><td class="num">1</td></tr>
-          <tr><td>Constats « empilement de mots-clés »</td><td class="num">1 (0–2)</td><td class="num">0</td><td class="num">0</td></tr>
-          <tr><td>Accusations inventées par exécution</td><td class="num">0</td><td class="num">0</td><td class="num">0</td></tr>
-          <tr><td>Constats vérifiés par exécution</td><td class="num">322,7 (321–325)</td><td class="num">57 (49–71)</td><td class="num">21 (21–21)</td></tr>
-          <tr><td>Constats imprimés dans le rapport</td><td class="num">120,7 (112–131)</td><td class="num">24 (13–43)</td><td class="num">7 (7–7)</td></tr>
-          <tr><td>Temps de modèle par exécution</td><td class="num">45 724 s (40 770–50 601)</td><td class="num">3 985 s (3 615–4 356)</td><td class="num">2 175 s (2 159–2 206)</td></tr>
+          <tr><td>Scénarios attendus retrouvés</td><td class="num">100 %</td><td class="num">n/a</td><td class="num">n/a</td><td class="num">n/a</td></tr>
+          <tr><td>Scénarios retenus par exécution</td><td class="num">2,7 (2–4)</td><td class="num">0,8 (0–2)</td><td class="num">0,2 (0–1)</td><td class="num">0</td></tr>
+          <tr><td>Rappel du rapport principal</td><td class="num">68 % (61–78)</td><td class="num">68 % (50–100)</td><td class="num">85 % (83–100)</td><td class="num">90 % (67–100)</td></tr>
+          <tr><td>Rappel de la lecture</td><td class="num">82 % (72–89)</td><td class="num">78 % (75–88)</td><td class="num">100 %</td><td class="num">100 %</td></tr>
+          <tr><td>Citations valides (après relance)</td><td class="num">97 % (92–99)</td><td class="num">95 % (95–96)</td><td class="num">92 % (72–97)</td><td class="num">80 % (51–95)</td></tr>
+          <tr><td>Constats émis sans preuve valide</td><td class="num">0 %</td><td class="num">0 %</td><td class="num">0 %</td><td class="num">0 %</td></tr>
+          <tr><td>Accusations inventées par exécution</td><td class="num">0</td><td class="num">0,4 (0–2)</td><td class="num">0</td><td class="num">0</td></tr>
+          <tr><td>Seuil des témoins (<code>gate_temoin.json</code>)</td><td class="num">—</td><td class="num">—</td><td class="num"><span class="tag ko">non tenu</span></td><td class="num"><span class="tag ok">tenu</span></td></tr>
         </tbody>
       </table>
       </div>
-      <ul class="small">
-        <li><strong>Magnet</strong> — faits hors d'atteinte (absents des preuves transmises) : GT-08, GT-09. Jamais
-        retrouvés dans le rapport : GT-07, GT-11, GT-12, GT-16, GT-18. Scénarios SC-1, SC-2, SC-3 : 100 %.
-        Qualifications envisagées : CP143, CP146, CP156, CP162, CP180, CP181, CP251, CP273.</li>
-        <li><strong>Ambigu</strong> — SY-06 retrouvé dans 33 % des exécutions.</li>
-        <li><strong>Bénin</strong> — SY-03, SY-04, SY-06 jamais retrouvés dans le rapport.</li>
-        <li>Durée murale de la campagne : environ 17 h pour Magnet (3 exécutions), 3 h 15 pour ambigu, 1 h 30 pour bénin.</li>
-      </ul>
-      <p>Graphiques et lecture commentée : <a href="analystes.html#resultats">guide analystes</a>.</p>
+      <p class="small muted">Point faible principal : sur Hickman, sans infraction, 3 exécutions sur 5 retiennent au
+      moins un scénario. Ces chiffres remplacent ceux du 3 octobre (3 exécutions par cas, sans Hickman).</p>
     </section>
 
     <!-- ========================================================================================== -->
     <section id="tests">
       <h2>Tests et CI</h2>
-      <p>111 tests collectés par pytest (<code>asyncio_mode = "auto"</code>), sur un cas synthétique et un faux modèle :
+      <p>112 tests collectés par pytest (<code>asyncio_mode = "auto"</code>), sur un cas synthétique et un faux modèle :
       aucun serveur d'inférence requis.</p>
       <div class="table-wrap">
       <table>
@@ -1226,7 +1216,7 @@ READ_LLM_URL=http://localhost:8081/v1 READ_MODEL_NAME=qwen3.6-35b-a3b \
           <tr><td><code>tests/test_pipeline.py</code></td><td>Le graphe de bout en bout : tout est lu sans plafond, couverture de chaque source, messages exportés tels quels, aucun appel sans données, pannes d'outil et exports corrompus signalés, réponses vides ou coupées, cas qui ne se mélangent pas, UTC, traçage cloud coupé, provenance réelle.</td></tr>
           <tr><td><code>tests/test_robustesse.py</code></td><td>Texte non vérifié hors du rapport, références <code>P…</code> rejetées, échappement Markdown, champs malformés, plafond « étayé », pas de contradicteur sans charge, fenêtre de dates, citations coupées ou réordonnées, preuves décisives, pas d'acte sans scénario retenu, envoi à Langfuse.</td></tr>
           <tr><td><code>tests/test_custody.py</code></td><td>Manifeste, empreintes, scellé et <code>--verify</code>, preuves modifiées pendant ou après l'exécution, dossier d'exécution dans les preuves refusé, décision liée au brouillon relu, altération entre pause et reprise, code changé, rejet, rapport non relu, CLI.</td></tr>
-          <tr><td><code>tests/test_evaluate.py</code></td><td>Règles de détection, faits comptés seulement avec la preuve, empilements, source exacte, négations, agrégation et seuils, audit du jeu.</td></tr>
+          <tr><td><code>tests/test_evaluate.py</code></td><td>Règles de détection, faits comptés seulement avec la preuve, empilements, source exacte, négations, agrégation et seuils, audit du jeu, lieu cherché qui ne vaut pas rendez-vous.</td></tr>
           <tr><td><code>tests/test_smoke.py</code></td><td>Chargement du graphe ; le serveur MCP sert le cas demandé.</td></tr>
         </tbody>
       </table>
@@ -1278,7 +1268,7 @@ READ_LLM_URL=http://localhost:8081/v1 READ_MODEL_NAME=qwen3.6-35b-a3b READ_PARAL
           <tr><td>Sauvegarde de Langfuse</td><td><code>infra/backup-langfuse.sh</code> arrête les services le temps de la copie (jamais pendant une analyse), archive chaque volume avec <code>SHA256SUMS</code>. Le <code>.env</code> de Langfuse n'est pas copié ; la restauration n'a pas été testée.</td></tr>
           <tr><td>Reproductibilité au mot près</td><td>Non garantie à température 0,1 et graine fixe : l'évaluation mesure la dispersion sur plusieurs exécutions.</td></tr>
           <tr><td>Fichier du modèle</td><td>Identifié par son chemin ; un blob Ollama porte son SHA-256 dans son nom, le harness ne le recalcule pas.</td></tr>
-          <tr><td>Rendu de longue durée</td><td>Lancer dans <code>tmux</code> : une analyse de la taille de Magnet dure plus de 12 h de temps de modèle sur la configuration de référence.</td></tr>
+          <tr><td>Rendu de longue durée</td><td>Lancer dans <code>tmux</code> : sur la configuration de référence, une exécution dure environ 6 h à l'horloge pour Magnet, environ 30 h pour un téléphone chargé comme Hickman.</td></tr>
         </tbody>
       </table>
       </div>
@@ -1307,9 +1297,9 @@ READ_LLM_URL=http://localhost:8081/v1 READ_MODEL_NAME=qwen3.6-35b-a3b READ_PARAL
       est celle de <code>infra/</code>.</p>
     </section>
 
-    <p class="footer">Documentation établie à partir du code : harness <code>71905ce</code>, iLEAPP-MCP
-    <code>47a630f</code> (branche <code>feat/harness-provenance</code>), configuration de la machine de référence au
-    5 octobre 2026.</p>
+    <p class="footer">Documentation établie à partir du code : harness <code>fbb2702</code> (<a href="https://github.com/Wo0keyz/Harness-forensique-iOS">Wo0keyz/Harness-forensique-iOS</a>), iLEAPP-MCP
+    <code>8221f33</code> (<a href="https://github.com/Wo0keyz/iLEAPP-MCP/tree/feat/harness-provenance">Wo0keyz/iLEAPP-MCP</a>, branche <code>feat/harness-provenance</code>), configuration de la machine de
+    référence au 5 octobre 2026, résultats d'évaluation du 13 octobre 2026.</p>
   </main>
 </div>
 </body>

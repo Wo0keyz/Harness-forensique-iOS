@@ -16,6 +16,7 @@
     <nav class="tabs" aria-label="Pages">
       <a href="index.html">Accueil</a>
       <a href="analystes.html" aria-current="page">Guide analystes</a>
+      <a href="resultats.html">Résultats</a>
       <a href="technique.html">Documentation technique</a>
     </nav>
     <button class="theme-toggle" type="button">Thème sombre</button>
@@ -1098,16 +1099,16 @@
       <figure class="diagram">
         <div class="scroll-x">
         <svg viewBox="0 0 880 232" role="img" aria-labelledby="figL-t">
-          <title id="figL-t">L'évaluation : quatre cas, trois exécutions chacun sur une copie figée du code sans cache, notation contre la vérité terrain</title>
+          <title id="figL-t">L'évaluation : quatre cas, plusieurs exécutions chacun sur une copie figée du code sans cache, notation contre la vérité terrain</title>
           <defs>
             <marker id="aL" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="arrow-head" d="M0,0 L10,5 L0,10 z"/></marker>
           </defs>
           <rect class="b-data" x="8" y="8" width="210" height="46" rx="6"/>
           <text x="113" y="28" text-anchor="middle" font-size="12.5" class="t-b">Magnet · iOS public</text>
           <text x="113" y="44" text-anchor="middle" font-size="11" class="t-muted">18 faits, 3 scénarios attendus</text>
-          <rect class="zone" x="8" y="64" width="210" height="46" rx="6"/>
+          <rect class="b-data" x="8" y="64" width="210" height="46" rx="6"/>
           <text x="113" y="84" text-anchor="middle" font-size="12.5" class="t-b">Hickman · iOS 17 public</text>
-          <text x="113" y="100" text-anchor="middle" font-size="11" class="t-muted">tenu à l'écart, pas encore évalué</text>
+          <text x="113" y="100" text-anchor="middle" font-size="11" class="t-muted">tenu à l'écart, rien à retenir</text>
           <rect class="b-data" x="8" y="120" width="210" height="46" rx="6"/>
           <text x="113" y="140" text-anchor="middle" font-size="12.5" class="t-b">Témoin ambigu</text>
           <text x="113" y="156" text-anchor="middle" font-size="11" class="t-muted">synthétique, rien à retenir</text>
@@ -1119,7 +1120,7 @@
           <line class="line" x1="240" y1="115" x2="270" y2="115" marker-end="url(#aL)"/>
 
           <rect class="b-code" x="272" y="66" width="190" height="98" rx="6"/>
-          <text x="367" y="92" text-anchor="middle" font-size="12.5" class="t-b">3 exécutions par cas</text>
+          <text x="367" y="92" text-anchor="middle" font-size="12.5" class="t-b">5 à 10 exécutions par cas</text>
           <text x="367" y="112" text-anchor="middle" font-size="11.5">copie figée du code</text>
           <text x="367" y="130" text-anchor="middle" font-size="11.5">sans cache des réponses</text>
           <text x="367" y="148" text-anchor="middle" font-size="11.5">sans arrêt pour validation</text>
@@ -1150,7 +1151,7 @@
         3 scénarios. Elle sert aussi à régler les prompts : <strong>ses chiffres sont optimistes</strong>.</li>
         <li><strong>Hickman</strong> : image publique iOS 17 (Digital Corpora), un usage quotidien documenté sans
         infraction, mais une quinzaine d'applications de confidentialité et une plaisanterie sur un « malware ». Elle
-        est <strong>tenue à l'écart</strong> : jamais regardée pour régler quoi que ce soit. Elle mesurera les
+        est <strong>tenue à l'écart</strong> : jamais regardée pour régler quoi que ce soit. Elle mesure les
         accusations inventées sur un vrai téléphone.</li>
         <li><strong>Témoin ambigu</strong> : cas synthétique avec des éléments qui ressemblent à des signaux mais sont
         innocents (plaisanterie, remboursement, réinitialisation…). Aucun scénario ne doit être retenu.</li>
@@ -1168,6 +1169,7 @@
           <tr><td>Plafond de rappel</td><td>Part des faits présents dans les preuves transmises : ce qui manque ici est un défaut d'extraction, pas de raisonnement.</td></tr>
           <tr><td>Citations valides</td><td>Part des constats acceptés par le contrôle automatique, au premier essai et après relance.</td></tr>
           <tr><td>Accusations inventées</td><td>Sur un cas témoin, constats qui affirment un terme accusatoire qui n'a rien à y faire.</td></tr>
+          <tr><td>Seuil des témoins</td><td>Bloquant : 0 scénario retenu et 0 accusation inventée sur les deux témoins, sinon l'évaluation échoue.</td></tr>
         </tbody>
       </table>
       </div>
@@ -1182,130 +1184,37 @@
     <!-- ========================================================================================== -->
     <section id="resultats">
       <h2>Résultats actuels</h2>
-      <p>Évaluation <code>phase36-fixes</code>, terminée le 3 octobre 2026 : 3 exécutions par cas, modèle Qwen3.8 27B
-      pour toutes les étapes. Hickman n'a pas pu être évalué (sortie iLEAPP absente au moment de la campagne).</p>
+      <p>Campagne terminée le 13 octobre 2026 : 35 exécutions, modèle Qwen3.8 27B pour toutes les étapes. Magnet et
+      les deux témoins sont exécutés 10 fois, Hickman 5 fois (une exécution y dure environ 30 heures). Le détail,
+      avec un graphique par cas et chaque fait de la vérité terrain, est sur la page
+      <a href="resultats.html">Résultats</a>.</p>
       <div class="kpis">
-        <div class="kpi ok"><div class="v">100 %</div><div class="l">scénarios attendus retrouvés sur Magnet (3 / 3, à chaque exécution)</div></div>
-        <div class="kpi ok"><div class="v">97 %</div><div class="l">citations valides sur Magnet, après relance</div></div>
-        <div class="kpi ok"><div class="v">0</div><div class="l">accusation inventée, sur toutes les exécutions</div></div>
+        <div class="kpi ok"><div class="v">100 %</div><div class="l">scénarios attendus retrouvés sur Magnet, à chacune des 10 exécutions</div></div>
         <div class="kpi ok"><div class="v">0 %</div><div class="l">constats émis sans preuve valide, tous cas</div></div>
+        <div class="kpi ok"><div class="v">95 %</div><div class="l">citations valides sur Hickman, un téléphone jamais vu au réglage</div></div>
+        <div class="kpi ko"><div class="v">3 / 5</div><div class="l">exécutions Hickman qui retiennent un scénario, sans infraction à trouver</div></div>
       </div>
-
-      <h3>Magnet</h3>
-      <figure class="diagram">
-        <div class="scroll-x">
-        <svg viewBox="0 0 880 290" role="img" aria-labelledby="figM-t">
-          <title id="figM-t">Mesures sur Magnet, en pourcentage, moyenne de 3 exécutions</title>
-          <!-- axe : 0 % à x=340, 100 % à x=800 -->
-          <line class="grid-line" x1="340" y1="10" x2="340" y2="250"/>
-          <line class="grid-line" x1="455" y1="10" x2="455" y2="250"/>
-          <line class="grid-line" x1="570" y1="10" x2="570" y2="250"/>
-          <line class="grid-line" x1="685" y1="10" x2="685" y2="250"/>
-          <line class="grid-line" x1="800" y1="10" x2="800" y2="250"/>
-          <text x="340" y="270" text-anchor="middle" font-size="11" class="t-muted">0 %</text>
-          <text x="455" y="270" text-anchor="middle" font-size="11" class="t-muted">25 %</text>
-          <text x="570" y="270" text-anchor="middle" font-size="11" class="t-muted">50 %</text>
-          <text x="685" y="270" text-anchor="middle" font-size="11" class="t-muted">75 %</text>
-          <text x="800" y="270" text-anchor="middle" font-size="11" class="t-muted">100 %</text>
-
-          <g><title>Scénarios attendus retrouvés : 100 % (100 %–100 %)</title>
-            <text x="8" y="32" font-size="13">Scénarios attendus retrouvés</text>
-            <rect class="fill-data" x="340" y="20" width="460" height="16" rx="3"/>
-            <text x="810" y="33" font-size="12.5" class="t-b">100 %</text></g>
-          <g><title>Source exacte parmi les faits retrouvés : 100 %</title>
-            <text x="8" y="72" font-size="13">Source exacte des faits retrouvés</text>
-            <rect class="fill-data" x="340" y="60" width="460" height="16" rx="3"/>
-            <text x="810" y="73" font-size="12.5" class="t-b">100 %</text></g>
-          <g><title>Citations valides après relance : 97 % (97 %–97 %) ; au premier essai : 94 %</title>
-            <text x="8" y="112" font-size="13">Citations valides (après relance)</text>
-            <rect class="fill-data" x="340" y="100" width="446" height="16" rx="3"/>
-            <text x="810" y="113" font-size="12.5" class="t-b">97 %</text></g>
-          <g><title>Plafond de rappel : 89 % des faits sont présents dans les preuves transmises</title>
-            <text x="8" y="152" font-size="13">Plafond de rappel</text>
-            <rect class="fill-data" x="340" y="140" width="409" height="16" rx="3"/>
-            <text x="810" y="153" font-size="12.5" class="t-b">89 %</text></g>
-          <g><title>Rappel de la lecture : 82 % (78 %–83 %)</title>
-            <text x="8" y="192" font-size="13">Rappel de la lecture</text>
-            <rect class="fill-data" x="340" y="180" width="377" height="16" rx="3"/>
-            <line class="line" x1="699" y1="188" x2="722" y2="188"/>
-            <line class="line" x1="699" y1="182" x2="699" y2="194"/>
-            <line class="line" x1="722" y1="182" x2="722" y2="194"/>
-            <text x="810" y="193" font-size="12.5" class="t-b">82 %</text></g>
-          <g><title>Rappel du rapport principal : 61 % (61 %–61 %)</title>
-            <text x="8" y="232" font-size="13">Rappel du rapport principal</text>
-            <rect class="fill-data" x="340" y="220" width="281" height="16" rx="3"/>
-            <text x="810" y="233" font-size="12.5" class="t-b">61 %</text></g>
-        </svg>
-        </div>
-        <figcaption><b>Figure 12.</b> Magnet, moyenne de 3 exécutions. Le trait sur « rappel de la lecture » montre
-        l'étendue (78 % à 83 %) ; les autres mesures n'ont pas varié d'une exécution à l'autre. Survoler une barre
-        affiche sa valeur exacte.</figcaption>
-      </figure>
-      <p>L'écart entre le rappel de la lecture (82 %) et celui du rapport (61 %) est ce que la rédaction laisse de
-      côté : des faits vérifiés à la lecture, mais pas repris dans le rapport principal. Ils restent dans le fichier
-      de détail. Les 11 % hors plafond (2 faits sur 18) ne sont dans aucune preuve transmise : c'est un défaut
-      d'extraction, pas de raisonnement.</p>
-      <h4>Les 18 faits de la vérité terrain, dans le rapport principal</h4>
-      <div class="legend">
-        <span><span class="tag ok">✓ 3 / 3</span> retrouvé à chaque exécution</span>
-        <span><span class="tag ko">✗ 0 / 3</span> jamais retrouvé</span>
-        <span><span class="tag warn">— hors d'atteinte</span> absent des preuves transmises</span>
-      </div>
-      <div class="table-wrap">
-      <table class="small">
-        <thead><tr><th>Fait</th><th>Catégorie</th><th>Description résumée</th><th>Rapport</th></tr></thead>
-        <tbody>
-          <tr><td><code>GT-01</code></td><td>Identification</td><td>Numéro de série, modèle, version d'iOS</td><td><span class="tag ok">✓ 3 / 3</span></td></tr>
-          <tr><td><code>GT-02</code></td><td>Identification</td><td>Numéro de ligne, IMSI, ICCID</td><td><span class="tag ok">✓ 3 / 3</span></td></tr>
-          <tr><td><code>GT-03</code></td><td>Identification</td><td>Compte Apple ID personnel</td><td><span class="tag ok">✓ 3 / 3</span></td></tr>
-          <tr><td><code>GT-04</code></td><td>Identification</td><td>Nom de l'appareil</td><td><span class="tag ok">✓ 3 / 3</span></td></tr>
-          <tr><td><code>GT-05</code></td><td>Écosystème</td><td>Appareils Bluetooth appairés</td><td><span class="tag ok">✓ 3 / 3</span></td></tr>
-          <tr><td><code>GT-06</code></td><td>Applications</td><td>Messageries chiffrées installées</td><td><span class="tag ok">✓ 3 / 3</span></td></tr>
-          <tr><td><code>GT-07</code></td><td>Mode de vie</td><td>Domicile principal</td><td><span class="tag ko">✗ 0 / 3</span></td></tr>
-          <tr><td><code>GT-08</code></td><td>Mode de vie</td><td>Localisation secondaire après l'incident</td><td><span class="tag warn">— hors d'atteinte</span></td></tr>
-          <tr><td><code>GT-09</code></td><td>Mode de vie</td><td>Rythme de déverrouillage nocturne</td><td><span class="tag warn">— hors d'atteinte</span></td></tr>
-          <tr><td><code>GT-10</code></td><td>Relations</td><td>Supérieur hiérarchique (contact, employeur)</td><td><span class="tag ok">✓ 3 / 3</span></td></tr>
-          <tr><td><code>GT-11</code></td><td>Chronologie</td><td>SMS d'enregistrement Signal</td><td><span class="tag ko">✗ 0 / 3</span></td></tr>
-          <tr><td><code>GT-12</code></td><td>Chronologie</td><td>Premier contact sur Signal</td><td><span class="tag ko">✗ 0 / 3</span></td></tr>
-          <tr><td><code>GT-13</code></td><td>Chronologie</td><td>Bascule demandée vers Zangi</td><td><span class="tag ok">✓ 3 / 3</span></td></tr>
-          <tr><td><code>GT-14</code></td><td>Chronologie</td><td>Offre de 10 000 $ pour des rapports, puis menaces</td><td><span class="tag ok">✓ 3 / 3</span></td></tr>
-          <tr><td><code>GT-15</code></td><td>Chronologie</td><td>Fichier Astronautica_Sanitized.pdf</td><td><span class="tag ok">✓ 3 / 3</span></td></tr>
-          <tr><td><code>GT-16</code></td><td>Chronologie</td><td>Faux courriel usurpant un responsable</td><td><span class="tag ko">✗ 0 / 3</span></td></tr>
-          <tr><td><code>GT-17</code></td><td>Chronologie</td><td>Script envoyé (« Use this »)</td><td><span class="tag ok">✓ 3 / 3</span></td></tr>
-          <tr><td><code>GT-18</code></td><td>Chronologie</td><td>Confirmation d'exécution par l'utilisateur</td><td><span class="tag ko">✗ 0 / 3</span></td></tr>
-        </tbody>
-      </table>
-      </div>
-      <p class="small muted">11 faits sur 18 retrouvés à chaque exécution, soit le rappel de 61 % du rapport
-      principal. Qualifications envisagées sur l'ensemble des exécutions : CP143, CP146, CP156, CP162, CP180, CP181,
-      CP251, CP273.</p>
-
-      <h3>Cas témoins</h3>
-      <p>Sur un cas témoin, le bon résultat est de ne rien retenir. Ce sont les cas les plus exigeants.</p>
       <div class="table-wrap">
       <table>
-        <thead><tr><th>Mesure (moyenne, étendue sur 3 exécutions)</th><th class="num">Ambigu</th><th class="num">Bénin</th><th class="num">Attendu</th></tr></thead>
+        <thead><tr><th>Mesure (moyenne)</th><th class="num">Magnet</th><th class="num">Hickman</th><th class="num">Ambigu</th><th class="num">Bénin</th></tr></thead>
         <tbody>
-          <tr><td>Scénarios retenus par exécution</td><td class="num"><span class="tag ko">0,33 (0–1)</span></td><td class="num"><span class="tag ok">0 (0–0)</span></td><td class="num">0</td></tr>
-          <tr><td>Scénarios examinés par exécution</td><td class="num">2</td><td class="num">0</td><td class="num">—</td></tr>
-          <tr><td>Accusations inventées par exécution</td><td class="num"><span class="tag ok">0</span></td><td class="num"><span class="tag ok">0</span></td><td class="num">0</td></tr>
-          <tr><td>Citations valides, après relance</td><td class="num">86 % (72–92)</td><td class="num"><span class="tag ko">51 % (51–51)</span></td><td class="num">élevé</td></tr>
-          <tr><td>Citations valides, au premier essai</td><td class="num">87 % (68–99)</td><td class="num">43 % (43–43)</td><td class="num">—</td></tr>
-          <tr><td>Rappel de la lecture</td><td class="num">100 %</td><td class="num">100 %</td><td class="num">—</td></tr>
-          <tr><td>Rappel du rapport principal</td><td class="num">89 % (83–100)</td><td class="num">50 %</td><td class="num">—</td></tr>
+          <tr><td>Citations valides (après relance)</td><td class="num">97 %</td><td class="num">95 %</td><td class="num">92 %</td><td class="num">80 %</td></tr>
+          <tr><td>Rappel de la lecture</td><td class="num">82 %</td><td class="num">78 %</td><td class="num">100 %</td><td class="num">100 %</td></tr>
+          <tr><td>Rappel du rapport principal</td><td class="num">68 %</td><td class="num">68 %</td><td class="num">85 %</td><td class="num">90 %</td></tr>
+          <tr><td>Scénarios retenus par exécution</td><td class="num">2,7 (3 attendus)</td><td class="num"><span class="tag ko">0,8</span></td><td class="num"><span class="tag ko">0,2</span></td><td class="num"><span class="tag ok">0</span></td></tr>
+          <tr><td>Accusations inventées par exécution</td><td class="num">0</td><td class="num"><span class="tag ko">0,4</span></td><td class="num"><span class="tag ok">0</span></td><td class="num"><span class="tag ok">0</span></td></tr>
         </tbody>
       </table>
       </div>
       <ul>
-        <li><strong>Ambigu</strong> : une exécution sur trois retient un scénario à tort. Aucune accusation inventée,
-        mais un faux positif au niveau des scénarios.</li>
-        <li><strong>Bénin</strong> : aucun scénario n'est examiné ni retenu, mais seulement 51 % des constats passent
-        le contrôle. Les rejets ne vont pas dans le rapport ; ils montrent que, sur un dossier sans histoire, le
-        modèle cite moins proprement.</li>
+        <li><strong>Ce qui tient</strong> : sur un téléphone jamais vu, les citations restent aussi fiables que sur le cas
+        de réglage, et aucun constat sans preuve valide n'atteint le rapport.</li>
+        <li><strong>Ce qui reste à durcir</strong> : sur un téléphone ordinaire mais chargé (applications de
+        confidentialité, hameçonnage reçu, plaisanteries), le harness retient parfois un scénario. Un scénario retenu
+        est une piste que l'analyste doit juger, jamais une conclusion.</li>
+        <li><strong>Ce qui manque au rapport</strong> : environ un tiers des faits connus ; une partie est repérée à la
+        lecture mais pas reprise par la rédaction, et reste dans le fichier de détail.</li>
       </ul>
-      <h3>Durées</h3>
-      <p>Temps de modèle par exécution : environ 12 h 40 sur Magnet (45 724 s en moyenne), 1 h 06 sur le cas ambigu,
-      36 min sur le cas bénin. La lecture des preuves représente l'essentiel des appels.</p>
     </section>
 
     <!-- ========================================================================================== -->
@@ -1331,8 +1240,8 @@
       </dl>
     </section>
 
-    <p class="footer">Guide établi à partir du code (harness <code>71905ce</code>, iLEAPP-MCP <code>47a630f</code>) et
-    des résultats d'évaluation du 3 octobre 2026. Les exemples sont reconstitués d'après la vérité terrain publique
+    <p class="footer">Guide établi à partir du code (harness <code>fbb2702</code>, <a href="https://github.com/Wo0keyz/Harness-forensique-iOS">Wo0keyz/Harness-forensique-iOS</a> ; iLEAPP-MCP
+    <code>8221f33</code>, <a href="https://github.com/Wo0keyz/iLEAPP-MCP/tree/feat/harness-provenance">Wo0keyz/iLEAPP-MCP</a>) et des résultats d'évaluation du 13 octobre 2026. Les exemples sont reconstitués d'après la vérité terrain publique
     du cas Magnet ; références, numéros et empreintes y sont fictifs.</p>
   </main>
 </div>
